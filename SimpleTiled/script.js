@@ -119,20 +119,29 @@ class GridSpot {
     constructor() {
         this.validStates = tiles.slice();
         this.collapsed = false;
+        this.collapsedState = null;
     }
     draw(x, y) {
-        const squares = Math.ceil(Math.sqrt(this.validStates.length));
-        const squareSize = TILE_SIZE / squares;
+        if (this.collapsed) {
+            context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
+        } else {
+            const squares = Math.ceil(Math.sqrt(this.validStates.length));
+            const squareSize = TILE_SIZE / squares;
 
-        for (let i = 0; i < squares; i++) {
-            for (let j = 0; j < squares; j++) {
-                let idx = i * squares + j;
-                if (idx < this.validStates.length) {
-                    const tile = this.validStates[idx];
-                    context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+            for (let i = 0; i < squares; i++) {
+                for (let j = 0; j < squares; j++) {
+                    let idx = i * squares + j;
+                    if (idx < this.validStates.length) {
+                        const tile = this.validStates[idx];
+                        context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+                    }
                 }
             }
         }
+    }
+    collapse() {
+        this.collapsed = true;
+        this.collapsedState = randomFromList(this.validStates);
     }
 }
 //----------------------------------------------------------------------------//
