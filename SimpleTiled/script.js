@@ -104,17 +104,17 @@ function swapToCanvasAndStart() {
 
     console.log(tileImgOptions);
 
-    // const filteredTileOptions = [];
-    // loop1: for (let i = 0; i < tileOptions.length; i++) {
-    //     loop2: for (let j = 0; j < filteredTileOptions.length; j++) {
-    //         if (samePixels(tileOptions[i], filteredTileOptions[j])) {
-    //             continue loop1;
-    //         }
-    //     }
-    //     filteredTileOptions.push(tileOptions[i]);
-    // }
-    // tileOptions = filteredTileOptions;
-    // console.log(tileOptions);
+    const filteredtileImgOptions = [];
+    loop1: for (let i = 0; i < tileImgOptions.length; i++) {
+        loop2: for (let j = 0; j < filteredtileImgOptions.length; j++) {
+            if (samePixels(tileImgOptions[i], filteredtileImgOptions[j])) {
+                continue loop1;
+            }
+        }
+        filteredtileImgOptions.push(tileImgOptions[i]);
+    }
+    tileImgOptions = filteredtileImgOptions;
+    console.log(tileImgOptions);
 
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
@@ -260,10 +260,10 @@ function setUpContext() {
 
     // disable anti-alising to make my pixel art look 'crisp'
     context.imageSmoothingEnabled = false; // standard
-    // context.mozImageSmoothingEnabled = false;    // Firefox
-    // context.oImageSmoothingEnabled = false;      // Opera
-    // context.webkitImageSmoothingEnabled = false; // Safari
-    // context.msImageSmoothingEnabled = false;     // IE
+    context.mozImageSmoothingEnabled = false;    // Firefox
+    context.oImageSmoothingEnabled = false;      // Opera
+    context.webkitImageSmoothingEnabled = false; // Safari
+    context.msImageSmoothingEnabled = false;     // IE
 
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -291,7 +291,7 @@ function draw() {
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             context.drawImage(grid[x][y], x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            // context.drawImage(tileOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            // context.drawImage(tileImgOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
             context.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
     }
