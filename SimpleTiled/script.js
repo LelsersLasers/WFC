@@ -7,36 +7,115 @@ const font = "monospace";
 const DIMS_X = 3;
 const DIMS_Y = 3;
 
-const TILE_SIZE = calcTileSize();
+const TILE_SIZE = Math.floor(calcTileSize());
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
 const TILE_OFFSET_Y = (canvas.height - (TILE_SIZE * DIMS_Y)) / 2;
 
 let tileImgOptions = [];
+let tiles = [];
 const grid = [];
 //----------------------------------------------------------------------------//
 
 
 //----------------------------------------------------------------------------//
+class Color {
+    constructor(r, g, b) {
+        this.r = r;
+        this.g = g;
+        this.b = b;
+    }
+    matches(other) {
+        return this.r === other.r && this.g === other.g && this.b === other.b && this.a === other.a;
+    }
+}
+
 class Socket {
-    constructor(id) {
-        this.id = id;
+    // clockwise labeled
+    // id: list of Color
+    constructor(ids) {
+        this.ids = ids;
+    }
+    matches(other) {
+        const otherIds = other.ids.slice().reverse();
+        for (let i = 0; i < this.ids.length; i++) {
+            if (!this.ids[i].matches(otherIds[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
 class Tile {
-    constructor(img) {
+    constructor(img, socketsPerSide) {
         this.img = img;
         this.sockets = {
-            top:    Socket(-1),
-            right:  Socket(-1),
-            bottom: Socket(-1),
-            left:   Socket(-1),
+            top:    new Socket([]),
+            right:  new Socket([]),
+            bottom: new Socket([]),
+            left:   new Socket([]),
         };
-        this.neighbors = {
+        this.setSockets(socketsPerSide);
+        this.valid_neighbors = {
             top:    [],
             right:  [],
             bottom: [],
             left:   [],
+        }
+    }
+    setSockets(socketsPerSide) {
+        const middle = Math.ceil(TILE_SIZE / 2);
+
+        const canv = document.createElement("canvas");
+        canv.width = TILE_SIZE;
+        canv.height = TILE_SIZE;
+
+        const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
+        ctx.drawImage(this.img, 0, 0, TILE_SIZE, TILE_SIZE);
+
+        if (socketsPerSide === 1) {
+            const spots = {
+                top:    [middle, 0],
+                right:  [TILE_SIZE - 1, middle],
+                bottom: [middle, TILE_SIZE - 1],
+                left:   [0, middle],
+            }
+            for (let side in spots) {
+                const x = spots[side][0];
+                const y = spots[side][1];
+                const pixel = ctx.getImageData(x, y, 1, 1).data;
+                this.sockets[side] = new Socket([new Color(pixel[0], pixel[1], pixel[2])]);
+            }
+        } else {
+            alert("TODO!")
+        }
+    }
+    analyzeTiles() {
+        // uses global tiles
+
+        const oppositeSide =  {
+            top:    "bottom",
+            right:  "left",
+            bottom: "top",
+            left:   "right",
+        }
+
+        for (let i = 0; i < tiles.length; i++) {
+            for (let side in this.sockets) {
+                // TODO: opposite side
+                const thisSocket = this.sockets[side];
+                const oppositeSocket = oppositeSide[side];
+                const otherSocket = tiles[i].sockets[oppositeSocket];
+
+                console.log({
+                    side, thisSocket, oppositeSocket, otherSocket
+                })
+
+                if (thisSocket.matches(otherSocket)) {
+                    this.valid_neighbors[side].push(tiles[i]);
+                    console.log("aaa");
+                }
+            }
         }
     }
 }
@@ -103,7 +182,6 @@ function swapToCanvasAndStart() {
     document.getElementById("files").setAttribute("hidden", "");
 
     // remove duplicate images
-    console.log(tileImgOptions);
     const filteredtileImgOptions = [];
     for (let i = 0; i < tileImgOptions.length; i++) {
         let inList = false;
@@ -117,7 +195,17 @@ function swapToCanvasAndStart() {
         }
     }
     tileImgOptions = filteredtileImgOptions;
-    console.log(tileImgOptions);
+
+    // create tiles
+    for (let i = 0; i < tileImgOptions.length; i++) {
+        tiles.push(new Tile(tileImgOptions[i], 1));
+    }
+
+    // set valid neighbors for tiles
+    tiles.forEach((tile) => tile.analyzeTiles());
+
+    console.log(tiles);
+
 
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
@@ -142,8 +230,8 @@ function samePixels(img1, img2) {
     canvas2.width = TILE_SIZE;
     canvas2.height = TILE_SIZE;
 
-    const ctx1 = getContextFromCanvas(canvas1);
-    const ctx2 = getContextFromCanvas(canvas2);
+    const ctx1 = getContextFromCanvas(canvas1, {willReadFrequently: true});
+    const ctx2 = getContextFromCanvas(canvas2, {willReadFrequently: true});
 
     ctx1.drawImage(img1, 0, 0, TILE_SIZE, TILE_SIZE);
     ctx2.drawImage(img2, 0, 0, TILE_SIZE, TILE_SIZE);
@@ -157,7 +245,6 @@ function samePixels(img1, img2) {
         }
     }
 
-    console.log("duplicate img found");
     return true;
 }
 
@@ -236,8 +323,8 @@ function randomFromList(lst) {
 
 
 //----------------------------------------------------------------------------//
-function getContextFromCanvas(canv) {
-    const ctx = canv.getContext("2d");
+function getContextFromCanvas(canv, options = {}) {
+    const ctx = canv.getContext("2d", options);
 
     // disable anti-alising to make it look 'crisp'
     ctx.imageSmoothingEnabled = false; // standard
@@ -318,15 +405,15 @@ function draw() {
 //----------------------------------------------------------------------------//
 
 
-function pick(event) {
-    const bounding = canvas.getBoundingClientRect();
-    const x = event.clientX - bounding.left;
-    const y = event.clientY - bounding.top;
-    const pixel = context.getImageData(x, y, 1, 1);
-    const data = pixel.data;
+// function pick(event) {
+//     const bounding = canvas.getBoundingClientRect();
+//     const x = event.clientX - bounding.left;
+//     const y = event.clientY - bounding.top;
+//     const pixel = context.getImageData(x, y, 1, 1);
+//     const data = pixel.data;
   
-    const rgba = `${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255}`;
-    console.log(rgba);
-}
+//     const rgba = `${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255}`;
+//     console.log(rgba);
+// }
   
-canvas.addEventListener("mousemove", (event) => pick(event));
+// canvas.addEventListener("mousemove", (event) => pick(event));

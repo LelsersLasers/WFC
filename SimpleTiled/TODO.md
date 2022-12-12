@@ -2,6 +2,7 @@
 
 - Async properly
 	- Fix 2 sec wait
+- Dynamically/programtically choose socket locations
 
 ## WFC
 
