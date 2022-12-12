@@ -11,7 +11,7 @@ const TILE_SIZE_X = canvas.width / DIMS_X;
 const TILE_SIZE_Y = canvas.height / DIMS_Y;
 
 
-const tileOptions = [];
+let tileOptions = [];
 const grid = [];
 //----------------------------------------------------------------------------//
 
@@ -60,18 +60,25 @@ document.getElementById("files").addEventListener("change", (e) => {
             }
         }
 
-        filesToWaitFor = filteredFiles.length * 4;
+        // 4 rotations + 2 flips = 6
+        filesToWaitFor = filteredFiles.length * 6;
 
         for (let i = 0; i < filteredFiles.length; i++) {
             const imgReader = new FileReader();
             imgReader.addEventListener("load", function (event) {
-                for (r = 0; r < 4; r++) {
+                for (r = 0; r < 6; r++) {
                     const imgFile = event.target;
                     const img = new Image();
 
                     img.src = imgFile.result;
-                    // r * 90 = degrees rotated
-                    rotate(img.src, r, (newSrc) => img.src = newSrc);
+                    if (r < 4) {
+                        // r * 90 = degrees rotated
+                        rotate(img.src, r, (newSrc) => img.src = newSrc);
+                    } else if (r === 4) {
+                        flipX(img.src, (newSrc) => img.src = newSrc);
+                    } else if (r === 5) {
+                        flipY(img.src, (newSrc) => img.src = newSrc);
+                    }
 
                     tileOptions.push(img);
                     filesToWaitFor--;
@@ -82,8 +89,7 @@ document.getElementById("files").addEventListener("change", (e) => {
             });
             imgReader.readAsDataURL(filteredFiles[i]);
         }
-    }
-    else {
+    } else {
         alert("Your browser does not support File API");
     }
 });
@@ -95,13 +101,21 @@ function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
     document.getElementById("files").setAttribute("hidden", "");
 
+    console.log(tileOptions);
+
+    // tileOptions = tileOptions.filter((img) => 
+    //     tileOptions.every((img2) =>
+    //         ((img === img2) || !samePixels(img, img2))
+    //     )
+    // );
+    // console.log(tileOptions);
+
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x].push(randomFromList(tileOptions));
         }
     }
-    console.log(tileOptions);
 
     window.requestAnimationFrame(draw); // starts render loop
 }
@@ -109,6 +123,69 @@ function swapToCanvasAndStart() {
 
 
 //----------------------------------------------------------------------------//
+// function samePixels(img1, img2) {
+//     const canvas1 = document.createElement("canvas");
+//     const canvas2 = document.createElement("canvas");
+
+//     canvas1.width = TILE_SIZE_X;
+//     canvas1.height = TILE_SIZE_Y;
+//     canvas2.width = TILE_SIZE_X;
+//     canvas2.height = TILE_SIZE_Y;
+
+//     const ctx1 = canvas1.getContext("2d");
+//     const ctx2 = canvas2.getContext("2d");
+
+//     ctx1.drawImage(img1, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
+//     ctx2.drawImage(img2, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
+
+//     const data1 = ctx1.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
+//     const data2 = ctx2.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
+
+//     if (data1.length !== data2.length) {
+//         return false;
+//     }
+
+//     for (let i = 0; i < data1.length; i++) {
+//         if (data1[i] !== data2[i]) {
+//             return false;
+//         }
+//     }
+
+//     console.log("aaaa");
+//     return true;
+// }
+
+
+function flipX(src, callback) {
+    const img = new Image()
+    img.src = src;
+    img.onload = function() {
+        const canv = document.createElement('canvas');
+        canv.width = img.width;
+        canv.height = img.height;
+        canv.style.position = "absolute";
+        const ctx = canv.getContext("2d");
+        ctx.translate(img.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, 0, 0);
+        callback(canv.toDataURL());
+    }
+}
+function flipY(src, callback) {
+    const img = new Image()
+    img.src = src;
+    img.onload = function() {
+        const canv = document.createElement('canvas');
+        canv.width = img.width;
+        canv.height = img.height;
+        canv.style.position = "absolute";
+        const ctx = canv.getContext("2d");
+        ctx.translate(0, img.height);
+        ctx.scale(1, -1);
+        ctx.drawImage(img, 0, 0);
+        callback(canv.toDataURL());
+    }
+}
 function rotate(src, r, callback) {
     const img = new Image()
     img.src = src;
@@ -193,13 +270,13 @@ function setUpContext() {
 function draw() {
 
 
+    context.setTransform(1,0,0,1,0,0);
+
     context.strokeStyle = "white";
     context.lineWidth = 2;
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            // const randImg = randomFromList(tileOptions);
-            // context.drawImage(randImg, x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
             context.drawImage(grid[x][y], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
             context.strokeRect(x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
         }
