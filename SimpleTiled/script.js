@@ -3,12 +3,52 @@ const context = setUpContext();
 
 const font = "monospace";
 
-const tileImages = [];
+
+const DIMS_X = 20;
+const DIMS_Y = 20;
+
+const TILE_SIZE_X = canvas.width / DIMS_X;
+const TILE_SIZE_Y = canvas.height / DIMS_Y;
 
 
+const tileOptions = [];
+const grid = [];
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
+class Socket {
+    constructor(id) {
+        this.id = id;
+    }
+}
+
+
+class Tile {
+    constructor(img) {
+        this.img = img;
+        this.sockets = {
+            top:    Socket(-1),
+            right:  Socket(-1),
+            bottom: Socket(-1),
+            left:   Socket(-1),
+        };
+        this.neighbors = {
+            top:    [],
+            right:  [],
+            bottom: [],
+            left:   [],
+        }
+    }
+}
+
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
 document.getElementById("files").addEventListener("change", (e) => {
-    tileImages.length = 0;
-    let filesToWaitFor = 1;
+    tileOptions.length = 0;
+    let filesToWaitFor = -1;
 
     if (window.File && window.FileReader && window.FileList && window.Blob) {
         const files = e.target.files;
@@ -20,18 +60,24 @@ document.getElementById("files").addEventListener("change", (e) => {
             }
         }
 
-        filesToWaitFor = filteredFiles.length;
+        filesToWaitFor = filteredFiles.length * 4;
 
         for (let i = 0; i < filteredFiles.length; i++) {
             const imgReader = new FileReader();
             imgReader.addEventListener("load", function (event) {
-                const imgFile = event.target;
-                let img = new Image();
-                img.src = imgFile.result;
-                tileImages.push(img);
-                filesToWaitFor--;
-                if (filesToWaitFor <= 0) {
-                    swapToCanvasAndStart();
+                for (r = 0; r < 4; r++) {
+                    const imgFile = event.target;
+                    const img = new Image();
+
+                    img.src = imgFile.result;
+                    // r * 90 = degrees rotated
+                    rotate(img.src, r, (newSrc) => img.src = newSrc);
+
+                    tileOptions.push(img);
+                    filesToWaitFor--;
+                    if (filesToWaitFor <= 0) {
+                        swapToCanvasAndStart();
+                    }
                 }
             });
             imgReader.readAsDataURL(filteredFiles[i]);
@@ -41,23 +87,73 @@ document.getElementById("files").addEventListener("change", (e) => {
         alert("Your browser does not support File API");
     }
 });
+//----------------------------------------------------------------------------//
 
+
+//----------------------------------------------------------------------------//
 function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
     document.getElementById("files").setAttribute("hidden", "");
 
+    for (let x = 0; x < DIMS_X; x++) {
+        grid.push([]);
+        for (let y = 0; y < DIMS_Y; y++) {
+            grid[x].push(randomFromList(tileOptions));
+        }
+    }
+    console.log(tileOptions);
+
     window.requestAnimationFrame(draw); // starts render loop
 }
+//----------------------------------------------------------------------------//
 
 
+//----------------------------------------------------------------------------//
+function rotate(src, r, callback) {
+    const img = new Image()
+    img.src = src;
+    img.onload = function() {
+        const canv = document.createElement('canvas');
+        canv.width = img.height;
+        canv.height = img.width;
+        canv.style.position = "absolute";
+        const ctx = canv.getContext("2d");
+
+        switch (r) {
+            case 0: break;   // 0 degrees
+            case 1:         // 90 degrees
+                ctx.translate(img.height, img.width / img.height);
+                ctx.rotate(Math.PI / 2);
+                break;
+            case 2:         // 180 degrees
+                ctx.translate(img.width, img.height);
+                ctx.rotate(Math.PI);
+                break;
+            case 3:         // 270 degrees
+                ctx.translate(img.width / img.height, img.width);
+                ctx.rotate(Math.PI * 3 / 2);
+                break;
+        }
+        
+        
+        ctx.drawImage(img, 0, 0);
+        callback(canv.toDataURL());
+    }
+}
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
 function reset() {
     location.reload(); // reloads the webpage
 }
 function randomFromList(lst) {
     return lst[Math.floor(Math.random() * lst.length)];
 }
+//----------------------------------------------------------------------------//
 
 
+//----------------------------------------------------------------------------//
 function setUpContext() {
     // Get width/height of the browser window
     console.log("Window is ".concat(window.innerWidth, " by ").concat(window.innerHeight));
@@ -90,18 +186,26 @@ function setUpContext() {
 
     return context;
 }
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
 function draw() {
 
-    try {
-        const randImg = randomFromList(tileImages);
-        context.drawImage(randImg, 0, 0, canvas.width, canvas.height);
-    } catch (e) {  
-        console.log(e);
+
+    context.strokeStyle = "white";
+    context.lineWidth = 2;
+
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            // const randImg = randomFromList(tileOptions);
+            // context.drawImage(randImg, x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            context.drawImage(grid[x][y], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            context.strokeRect(x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+        }
     }
 
 
     window.requestAnimationFrame(draw);
 }
-
-
-
+//----------------------------------------------------------------------------//
