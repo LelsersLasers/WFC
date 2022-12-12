@@ -142,6 +142,7 @@ class GridSpot {
     collapse() {
         this.collapsed = true;
         this.collapsedState = randomFromList(this.validStates);
+        this.validStates = [this.collapsedState];
     }
 }
 //----------------------------------------------------------------------------//
@@ -228,8 +229,6 @@ function swapToCanvasAndStart() {
 
     // set valid neighbors for tiles
     tiles.forEach((tile) => tile.analyzeTiles());
-
-    console.log(tiles);
 
 
     for (let x = 0; x < DIMS_X; x++) {
@@ -401,6 +400,26 @@ function draw() {
 
     // context.fillStyle = "black";
     // context.fillRect(0, 0, canvas.width, canvas.height);
+    let lowestValidStates = tiles.length;
+    let lowestValidStatesIds = [];
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            if (!grid[x][y].collapsed) {
+                if (grid[x][y].validStates.length == 0) {
+                    alert("TODO: - reset")
+                } else if (grid[x][y].validStates.length < lowestValidStates) {
+                    lowestValidStates = grid[x][y].validStates.length;
+                    lowestValidStatesIds = [[x, y]];
+                } else if (grid[x][y].validStates.length == lowestValidStates) {
+                    lowestValidStatesIds.push([x, y]);
+                }
+            }
+        }
+    }
+    console.log(lowestValidStatesIds);
+
+    const idxToCollapse = randomFromList(lowestValidStatesIds);
+    grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
 
     context.strokeStyle = "white";
     context.lineWidth = 1;
@@ -426,7 +445,7 @@ function draw() {
     }
 
 
-    window.requestAnimationFrame(draw);
+    // window.requestAnimationFrame(draw);
 }
 //----------------------------------------------------------------------------//
 
@@ -443,3 +462,13 @@ function draw() {
 // }
   
 // canvas.addEventListener("mousemove", (event) => pick(event));
+
+document.addEventListener("keydown", keyDownHandle, false);
+
+function keyDownHandle(e) {
+	switch (e.key.toLowerCase()) {
+        case "s":
+            window.requestAnimationFrame(draw);
+            break;       
+    }
+}
