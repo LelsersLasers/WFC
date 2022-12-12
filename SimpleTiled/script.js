@@ -4,8 +4,8 @@ const context = setUpContext();
 const font = "monospace";
 
 
-const DIMS_X = 4;
-const DIMS_Y = 4;
+const DIMS_X = 3;
+const DIMS_Y = 3;
 
 const TILE_SIZE = calcTileSize();
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
@@ -22,7 +22,6 @@ class Socket {
         this.id = id;
     }
 }
-
 
 class Tile {
     constructor(img) {
@@ -41,14 +40,12 @@ class Tile {
         }
     }
 }
-
 //----------------------------------------------------------------------------//
 
 
 //----------------------------------------------------------------------------//
 document.getElementById("files").addEventListener("change", (e) => {
     tileImgOptions.length = 0;
-    let filesToWaitFor = -1;
 
     if (window.File && window.FileReader && window.FileList && window.Blob) {
         const files = e.target.files;
@@ -61,7 +58,7 @@ document.getElementById("files").addEventListener("change", (e) => {
         }
 
         // 4 rotations + 2 flips = 6
-        filesToWaitFor = filteredFiles.length * 6;
+        let = filesToWaitFor = filteredFiles.length * 6;
 
         for (let i = 0; i < filteredFiles.length; i++) {
             const imgReader = new FileReader();
@@ -83,7 +80,11 @@ document.getElementById("files").addEventListener("change", (e) => {
                     tileImgOptions.push(img);
                     filesToWaitFor--;
                     if (filesToWaitFor <= 0) {
-                        swapToCanvasAndStart();
+                        // TODO: better solution
+                        // 2 sec delay to wait for files to load
+                        setTimeout(() => {
+                            swapToCanvasAndStart()
+                        }, 2000);
                     }
                 }
             });
@@ -101,21 +102,22 @@ function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
     document.getElementById("files").setAttribute("hidden", "");
 
-    context.setTransform(1,0,0,1,0,0);
-
+    // remove duplicate images
     console.log(tileImgOptions);
-
-    // const filteredtileImgOptions = [];
-    // loop1: for (let i = 0; i < tileImgOptions.length; i++) {
-    //     loop2: for (let j = 0; j < filteredtileImgOptions.length; j++) {
-    //         if (samePixels(tileImgOptions[i], filteredtileImgOptions[j])) {
-    //             continue loop1;
-    //         }
-    //     }
-    //     filteredtileImgOptions.push(tileImgOptions[i]);
-    // }
-    // tileImgOptions = filteredtileImgOptions;
-    // console.log(tileImgOptions);
+    const filteredtileImgOptions = [];
+    for (let i = 0; i < tileImgOptions.length; i++) {
+        let inList = false;
+        for (let j = 0; j < filteredtileImgOptions.length; j++) {
+            if (samePixels(tileImgOptions[i], filteredtileImgOptions[j])) {
+                inList = true;
+            }
+        }
+        if (!inList) {
+            filteredtileImgOptions.push(tileImgOptions[i]);
+        }
+    }
+    tileImgOptions = filteredtileImgOptions;
+    console.log(tileImgOptions);
 
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
@@ -155,13 +157,7 @@ function samePixels(img1, img2) {
         }
     }
 
-    // for (let i = 0; i < data1.length; i++) {
-    //     if (ctx1.getImageData(i, i, 1, 1).data !== ctx2.getImageData(i, i, 1, 1).data) {
-    //         return false;
-    //     }
-    // }
-
-    console.log("aaaa");
+    console.log("duplicate img found");
     return true;
 }
 
@@ -209,7 +205,7 @@ function rotate(src, r, callback) {
         switch (r) {
             case 0: break;   // 0 degrees
             case 1:         // 90 degrees
-                ctx.translate(TILE_SIZE, TILE_SIZE / TILE_SIZE);
+                ctx.translate(TILE_SIZE, 0);
                 ctx.rotate(Math.PI / 2);
                 break;
             case 2:         // 180 degrees
@@ -217,7 +213,7 @@ function rotate(src, r, callback) {
                 ctx.rotate(Math.PI);
                 break;
             case 3:         // 270 degrees
-                ctx.translate(TILE_SIZE / TILE_SIZE, TILE_SIZE);
+                ctx.translate(0, TILE_SIZE);
                 ctx.rotate(Math.PI * 3 / 2);
                 break;
         }
@@ -243,7 +239,7 @@ function randomFromList(lst) {
 function getContextFromCanvas(canv) {
     const ctx = canv.getContext("2d");
 
-    // disable anti-alising to make my pixel art look 'crisp'
+    // disable anti-alising to make it look 'crisp'
     ctx.imageSmoothingEnabled = false; // standard
     ctx.mozImageSmoothingEnabled = false;    // Firefox
     ctx.oImageSmoothingEnabled = false;      // Opera
@@ -291,6 +287,9 @@ function calcTileSize() {
 //----------------------------------------------------------------------------//
 function draw() {
 
+    // context.fillStyle = "black";
+    // context.fillRect(0, 0, canvas.width, canvas.height);
+
     context.strokeStyle = "white";
     context.lineWidth = 1;
 
@@ -304,12 +303,12 @@ function draw() {
                 TILE_SIZE
             );
             // context.drawImage(tileImgOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
-            context.strokeRect(
-                x * TILE_SIZE + TILE_OFFSET_X,
-                y * TILE_SIZE + TILE_OFFSET_Y,
-                TILE_SIZE,
-                TILE_SIZE
-            );
+            // context.strokeRect(
+            //     x * TILE_SIZE + TILE_OFFSET_X,
+            //     y * TILE_SIZE + TILE_OFFSET_Y,
+            //     TILE_SIZE,
+            //     TILE_SIZE
+            // );
         }
     }
 
@@ -328,6 +327,6 @@ function pick(event) {
   
     const rgba = `${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255}`;
     console.log(rgba);
-  }
+}
   
-  canvas.addEventListener("mousemove", (event) => pick(event));
+canvas.addEventListener("mousemove", (event) => pick(event));
