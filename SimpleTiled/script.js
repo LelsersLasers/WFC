@@ -4,11 +4,12 @@ const context = setUpContext();
 const font = "monospace";
 
 
-const DIMS_X = 8;
-const DIMS_Y = 8;
+const DIMS_X = 4;
+const DIMS_Y = 4;
 
 const TILE_SIZE = calcTileSize();
-
+const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
+const TILE_OFFSET_Y = (canvas.height - (TILE_SIZE * DIMS_Y)) / 2;
 
 let tileImgOptions = [];
 const grid = [];
@@ -104,17 +105,17 @@ function swapToCanvasAndStart() {
 
     console.log(tileImgOptions);
 
-    const filteredtileImgOptions = [];
-    loop1: for (let i = 0; i < tileImgOptions.length; i++) {
-        loop2: for (let j = 0; j < filteredtileImgOptions.length; j++) {
-            if (samePixels(tileImgOptions[i], filteredtileImgOptions[j])) {
-                continue loop1;
-            }
-        }
-        filteredtileImgOptions.push(tileImgOptions[i]);
-    }
-    tileImgOptions = filteredtileImgOptions;
-    console.log(tileImgOptions);
+    // const filteredtileImgOptions = [];
+    // loop1: for (let i = 0; i < tileImgOptions.length; i++) {
+    //     loop2: for (let j = 0; j < filteredtileImgOptions.length; j++) {
+    //         if (samePixels(tileImgOptions[i], filteredtileImgOptions[j])) {
+    //             continue loop1;
+    //         }
+    //     }
+    //     filteredtileImgOptions.push(tileImgOptions[i]);
+    // }
+    // tileImgOptions = filteredtileImgOptions;
+    // console.log(tileImgOptions);
 
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
@@ -139,8 +140,8 @@ function samePixels(img1, img2) {
     canvas2.width = TILE_SIZE;
     canvas2.height = TILE_SIZE;
 
-    const ctx1 = canvas1.getContext("2d");
-    const ctx2 = canvas2.getContext("2d");
+    const ctx1 = getContextFromCanvas(canvas1);
+    const ctx2 = getContextFromCanvas(canvas2);
 
     ctx1.drawImage(img1, 0, 0, TILE_SIZE, TILE_SIZE);
     ctx2.drawImage(img2, 0, 0, TILE_SIZE, TILE_SIZE);
@@ -173,7 +174,7 @@ function flipX(src, callback) {
         canv.width = TILE_SIZE;
         canv.height = TILE_SIZE;
         canv.style.position = "absolute";
-        const ctx = canv.getContext("2d");
+        const ctx = getContextFromCanvas(canv);
         ctx.translate(TILE_SIZE, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
@@ -188,7 +189,7 @@ function flipY(src, callback) {
         canv.width = TILE_SIZE;
         canv.height = TILE_SIZE;
         canv.style.position = "absolute";
-        const ctx = canv.getContext("2d");
+        const ctx = getContextFromCanvas(canv);
         ctx.translate(0, TILE_SIZE);
         ctx.scale(1, -1);
         ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
@@ -203,7 +204,7 @@ function rotate(src, r, callback) {
         canv.width = TILE_SIZE;
         canv.height = TILE_SIZE;
         canv.style.position = "absolute";
-        const ctx = canv.getContext("2d");
+        const ctx = getContextFromCanvas(canv);
 
         switch (r) {
             case 0: break;   // 0 degrees
@@ -239,6 +240,18 @@ function randomFromList(lst) {
 
 
 //----------------------------------------------------------------------------//
+function getContextFromCanvas(canv) {
+    const ctx = canv.getContext("2d");
+
+    // disable anti-alising to make my pixel art look 'crisp'
+    ctx.imageSmoothingEnabled = false; // standard
+    ctx.mozImageSmoothingEnabled = false;    // Firefox
+    ctx.oImageSmoothingEnabled = false;      // Opera
+    ctx.webkitImageSmoothingEnabled = false; // Safari
+    ctx.msImageSmoothingEnabled = false;     // IE
+
+    return ctx;
+}
 function setUpContext() {
     // Get width/height of the browser window
     console.log("Window is ".concat(window.innerWidth, " by ").concat(window.innerHeight));
@@ -256,14 +269,7 @@ function setUpContext() {
     // canvas.onmouseup = () => mouseDown = false;
 
     // Set up the context for the animation
-    const context = canvas.getContext("2d");
-
-    // disable anti-alising to make my pixel art look 'crisp'
-    context.imageSmoothingEnabled = false; // standard
-    context.mozImageSmoothingEnabled = false;    // Firefox
-    context.oImageSmoothingEnabled = false;      // Opera
-    context.webkitImageSmoothingEnabled = false; // Safari
-    context.msImageSmoothingEnabled = false;     // IE
+    const context = getContextFromCanvas(canvas);
 
     context.textAlign = "center";
     context.textBaseline = "middle";
@@ -290,9 +296,20 @@ function draw() {
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            context.drawImage(grid[x][y], x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            context.drawImage(
+                grid[x][y],
+                x * TILE_SIZE + TILE_OFFSET_X,
+                y * TILE_SIZE + TILE_OFFSET_Y,
+                TILE_SIZE,
+                TILE_SIZE
+            );
             // context.drawImage(tileImgOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
-            context.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+            context.strokeRect(
+                x * TILE_SIZE + TILE_OFFSET_X,
+                y * TILE_SIZE + TILE_OFFSET_Y,
+                TILE_SIZE,
+                TILE_SIZE
+            );
         }
     }
 
