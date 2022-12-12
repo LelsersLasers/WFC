@@ -56,7 +56,7 @@ class Tile {
             left:   new Socket([]),
         };
         this.setSockets(socketsPerSide);
-        this.valid_neighbors = {
+        this.validNeighbors = {
             top:    [],
             right:  [],
             bottom: [],
@@ -107,13 +107,29 @@ class Tile {
                 const oppositeSocket = oppositeSide[side];
                 const otherSocket = tiles[i].sockets[oppositeSocket];
 
-                console.log({
-                    side, thisSocket, oppositeSocket, otherSocket
-                })
-
                 if (thisSocket.matches(otherSocket)) {
-                    this.valid_neighbors[side].push(tiles[i]);
-                    console.log("aaa");
+                    this.validNeighbors[side].push(tiles[i]);
+                }
+            }
+        }
+    }
+}
+
+class GridSpot {
+    constructor() {
+        this.validStates = tiles.slice();
+        this.collapsed = false;
+    }
+    draw(x, y) {
+        const squares = Math.ceil(Math.sqrt(this.validStates.length));
+        const squareSize = TILE_SIZE / squares;
+
+        for (let i = 0; i < squares; i++) {
+            for (let j = 0; j < squares; j++) {
+                let idx = i * squares + j;
+                if (idx < this.validStates.length) {
+                    const tile = this.validStates[idx];
+                    context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
                 }
             }
         }
@@ -210,7 +226,7 @@ function swapToCanvasAndStart() {
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
-            grid[x].push(randomFromList(tileImgOptions));
+            grid[x].push(new GridSpot());
         }
     }
 
@@ -382,20 +398,21 @@ function draw() {
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            context.drawImage(
-                grid[x][y],
-                x * TILE_SIZE + TILE_OFFSET_X,
-                y * TILE_SIZE + TILE_OFFSET_Y,
-                TILE_SIZE,
-                TILE_SIZE
-            );
-            // context.drawImage(tileImgOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
-            // context.strokeRect(
+            grid[x][y].draw(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y)
+            // context.drawImage(
+            //     grid[x][y],
             //     x * TILE_SIZE + TILE_OFFSET_X,
             //     y * TILE_SIZE + TILE_OFFSET_Y,
             //     TILE_SIZE,
             //     TILE_SIZE
             // );
+            // context.drawImage(tileImgOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            context.strokeRect(
+                x * TILE_SIZE + TILE_OFFSET_X,
+                y * TILE_SIZE + TILE_OFFSET_Y,
+                TILE_SIZE,
+                TILE_SIZE
+            );
         }
     }
 
