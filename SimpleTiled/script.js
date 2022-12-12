@@ -7,11 +7,10 @@ const font = "monospace";
 const DIMS_X = 8;
 const DIMS_Y = 8;
 
-const TILE_SIZE_X = canvas.width / DIMS_X;
-const TILE_SIZE_Y = canvas.height / DIMS_Y;
+const TILE_SIZE = calcTileSize();
 
 
-let tileOptions = [];
+let tileImgOptions = [];
 const grid = [];
 //----------------------------------------------------------------------------//
 
@@ -47,7 +46,7 @@ class Tile {
 
 //----------------------------------------------------------------------------//
 document.getElementById("files").addEventListener("change", (e) => {
-    tileOptions.length = 0;
+    tileImgOptions.length = 0;
     let filesToWaitFor = -1;
 
     if (window.File && window.FileReader && window.FileList && window.Blob) {
@@ -80,7 +79,7 @@ document.getElementById("files").addEventListener("change", (e) => {
                         flipY(img.src, (newSrc) => img.src = newSrc);
                     }
 
-                    tileOptions.push(img);
+                    tileImgOptions.push(img);
                     filesToWaitFor--;
                     if (filesToWaitFor <= 0) {
                         swapToCanvasAndStart();
@@ -103,7 +102,7 @@ function swapToCanvasAndStart() {
 
     context.setTransform(1,0,0,1,0,0);
 
-    console.log(tileOptions);
+    console.log(tileImgOptions);
 
     // const filteredTileOptions = [];
     // loop1: for (let i = 0; i < tileOptions.length; i++) {
@@ -120,7 +119,7 @@ function swapToCanvasAndStart() {
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
-            grid[x].push(randomFromList(tileOptions));
+            grid[x].push(randomFromList(tileImgOptions));
         }
     }
 
@@ -134,20 +133,20 @@ function samePixels(img1, img2) {
     const canvas1 = document.createElement("canvas");
     const canvas2 = document.createElement("canvas");
 
-    canvas1.width = TILE_SIZE_X;
-    canvas1.height = TILE_SIZE_Y;
+    canvas1.width = TILE_SIZE;
+    canvas1.height = TILE_SIZE;
     
-    canvas2.width = TILE_SIZE_X;
-    canvas2.height = TILE_SIZE_Y;
+    canvas2.width = TILE_SIZE;
+    canvas2.height = TILE_SIZE;
 
     const ctx1 = canvas1.getContext("2d");
     const ctx2 = canvas2.getContext("2d");
 
-    ctx1.drawImage(img1, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
-    ctx2.drawImage(img2, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
+    ctx1.drawImage(img1, 0, 0, TILE_SIZE, TILE_SIZE);
+    ctx2.drawImage(img2, 0, 0, TILE_SIZE, TILE_SIZE);
 
-    const data1 = ctx1.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
-    const data2 = ctx2.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
+    const data1 = ctx1.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data;
+    const data2 = ctx2.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data;
 
     for (let i = 0; i < data1.length; i++) {
         if (data1[i] !== data2[i]) {
@@ -171,13 +170,13 @@ function flipX(src, callback) {
     img.src = src;
     img.onload = function() {
         const canv = document.createElement('canvas');
-        canv.width = img.width;
-        canv.height = img.height;
+        canv.width = TILE_SIZE;
+        canv.height = TILE_SIZE;
         canv.style.position = "absolute";
         const ctx = canv.getContext("2d");
-        ctx.translate(img.width, 0);
+        ctx.translate(TILE_SIZE, 0);
         ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
         callback(canv.toDataURL());
     }
 }
@@ -186,13 +185,13 @@ function flipY(src, callback) {
     img.src = src;
     img.onload = function() {
         const canv = document.createElement('canvas');
-        canv.width = img.width;
-        canv.height = img.height;
+        canv.width = TILE_SIZE;
+        canv.height = TILE_SIZE;
         canv.style.position = "absolute";
         const ctx = canv.getContext("2d");
-        ctx.translate(0, img.height);
+        ctx.translate(0, TILE_SIZE);
         ctx.scale(1, -1);
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
         callback(canv.toDataURL());
     }
 }
@@ -201,29 +200,28 @@ function rotate(src, r, callback) {
     img.src = src;
     img.onload = function() {
         const canv = document.createElement('canvas');
-        canv.width = img.height;
-        canv.height = img.width;
+        canv.width = TILE_SIZE;
+        canv.height = TILE_SIZE;
         canv.style.position = "absolute";
         const ctx = canv.getContext("2d");
 
         switch (r) {
             case 0: break;   // 0 degrees
             case 1:         // 90 degrees
-                ctx.translate(img.height, img.width / img.height);
+                ctx.translate(TILE_SIZE, TILE_SIZE / TILE_SIZE);
                 ctx.rotate(Math.PI / 2);
                 break;
             case 2:         // 180 degrees
-                ctx.translate(img.width, img.height);
+                ctx.translate(TILE_SIZE, TILE_SIZE);
                 ctx.rotate(Math.PI);
                 break;
             case 3:         // 270 degrees
-                ctx.translate(img.width / img.height, img.width);
+                ctx.translate(TILE_SIZE / TILE_SIZE, TILE_SIZE);
                 ctx.rotate(Math.PI * 3 / 2);
                 break;
         }
         
-        
-        ctx.drawImage(img, 0, 0);
+        ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
         callback(canv.toDataURL());
     }
 }
@@ -273,6 +271,14 @@ function setUpContext() {
 
     return context;
 }
+function calcTileSize() {
+    // Calculate the tile size
+    const tileW = canvas.width / DIMS_X;
+    const tileH = canvas.height / DIMS_Y;
+    const tileSize = Math.min(tileW, tileH);
+
+    return tileSize;
+}
 //----------------------------------------------------------------------------//
 
 
@@ -284,9 +290,9 @@ function draw() {
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            context.drawImage(grid[x][y], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            context.drawImage(grid[x][y], x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
             // context.drawImage(tileOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
-            context.strokeRect(x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            context.strokeRect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
         }
     }
 
