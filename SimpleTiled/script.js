@@ -4,8 +4,8 @@ const context = setUpContext();
 const font = "monospace";
 
 
-const DIMS_X = 20;
-const DIMS_Y = 20;
+const DIMS_X = 8;
+const DIMS_Y = 8;
 
 const TILE_SIZE_X = canvas.width / DIMS_X;
 const TILE_SIZE_Y = canvas.height / DIMS_Y;
@@ -101,13 +101,20 @@ function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
     document.getElementById("files").setAttribute("hidden", "");
 
+    context.setTransform(1,0,0,1,0,0);
+
     console.log(tileOptions);
 
-    // tileOptions = tileOptions.filter((img) => 
-    //     tileOptions.every((img2) =>
-    //         ((img === img2) || !samePixels(img, img2))
-    //     )
-    // );
+    // const filteredTileOptions = [];
+    // loop1: for (let i = 0; i < tileOptions.length; i++) {
+    //     loop2: for (let j = 0; j < filteredTileOptions.length; j++) {
+    //         if (samePixels(tileOptions[i], filteredTileOptions[j])) {
+    //             continue loop1;
+    //         }
+    //     }
+    //     filteredTileOptions.push(tileOptions[i]);
+    // }
+    // tileOptions = filteredTileOptions;
     // console.log(tileOptions);
 
     for (let x = 0; x < DIMS_X; x++) {
@@ -123,37 +130,40 @@ function swapToCanvasAndStart() {
 
 
 //----------------------------------------------------------------------------//
-// function samePixels(img1, img2) {
-//     const canvas1 = document.createElement("canvas");
-//     const canvas2 = document.createElement("canvas");
+function samePixels(img1, img2) {
+    const canvas1 = document.createElement("canvas");
+    const canvas2 = document.createElement("canvas");
 
-//     canvas1.width = TILE_SIZE_X;
-//     canvas1.height = TILE_SIZE_Y;
-//     canvas2.width = TILE_SIZE_X;
-//     canvas2.height = TILE_SIZE_Y;
+    canvas1.width = TILE_SIZE_X;
+    canvas1.height = TILE_SIZE_Y;
+    
+    canvas2.width = TILE_SIZE_X;
+    canvas2.height = TILE_SIZE_Y;
 
-//     const ctx1 = canvas1.getContext("2d");
-//     const ctx2 = canvas2.getContext("2d");
+    const ctx1 = canvas1.getContext("2d");
+    const ctx2 = canvas2.getContext("2d");
 
-//     ctx1.drawImage(img1, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
-//     ctx2.drawImage(img2, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
+    ctx1.drawImage(img1, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
+    ctx2.drawImage(img2, 0, 0, TILE_SIZE_X, TILE_SIZE_Y);
 
-//     const data1 = ctx1.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
-//     const data2 = ctx2.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
+    const data1 = ctx1.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
+    const data2 = ctx2.getImageData(0, 0, TILE_SIZE_X, TILE_SIZE_Y).data;
 
-//     if (data1.length !== data2.length) {
-//         return false;
-//     }
+    for (let i = 0; i < data1.length; i++) {
+        if (data1[i] !== data2[i]) {
+            return false;
+        }
+    }
 
-//     for (let i = 0; i < data1.length; i++) {
-//         if (data1[i] !== data2[i]) {
-//             return false;
-//         }
-//     }
+    // for (let i = 0; i < data1.length; i++) {
+    //     if (ctx1.getImageData(i, i, 1, 1).data !== ctx2.getImageData(i, i, 1, 1).data) {
+    //         return false;
+    //     }
+    // }
 
-//     console.log("aaaa");
-//     return true;
-// }
+    console.log("aaaa");
+    return true;
+}
 
 
 function flipX(src, callback) {
@@ -269,15 +279,13 @@ function setUpContext() {
 //----------------------------------------------------------------------------//
 function draw() {
 
-
-    context.setTransform(1,0,0,1,0,0);
-
     context.strokeStyle = "white";
-    context.lineWidth = 2;
+    context.lineWidth = 1;
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             context.drawImage(grid[x][y], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
+            // context.drawImage(tileOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
             context.strokeRect(x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
         }
     }
@@ -286,3 +294,17 @@ function draw() {
     window.requestAnimationFrame(draw);
 }
 //----------------------------------------------------------------------------//
+
+
+function pick(event) {
+    const bounding = canvas.getBoundingClientRect();
+    const x = event.clientX - bounding.left;
+    const y = event.clientY - bounding.top;
+    const pixel = context.getImageData(x, y, 1, 1);
+    const data = pixel.data;
+  
+    const rgba = `${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255}`;
+    console.log(rgba);
+  }
+  
+  canvas.addEventListener("mousemove", (event) => pick(event));
