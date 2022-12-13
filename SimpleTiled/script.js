@@ -4,8 +4,8 @@ const context = setUpContext();
 const font = "monospace";
 
 
-const DIMS_X = 3;
-const DIMS_Y = 3;
+const DIMS_X = 60;
+const DIMS_Y = 60;
 
 const TILE_SIZE = Math.floor(calcTileSize());
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
@@ -102,7 +102,6 @@ class Tile {
 
         for (let i = 0; i < tiles.length; i++) {
             for (let side in this.sockets) {
-                // TODO: opposite side
                 const thisSocket = this.sockets[side];
                 const oppositeSocket = oppositeSide[side];
                 const otherSocket = tiles[i].sockets[oppositeSocket];
@@ -125,20 +124,20 @@ class GridSpot {
         if (this.collapsed) {
             context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
         } else {
-            const squares = Math.ceil(Math.sqrt(tiles.length));
-            const squareSize = TILE_SIZE / squares;
+            // const squares = Math.ceil(Math.sqrt(tiles.length));
+            // const squareSize = TILE_SIZE / squares;
 
-            for (let i = 0; i < squares; i++) {
-                for (let j = 0; j < squares; j++) {
-                    let idx = i * squares + j;
-                    if (idx < tiles.length) {
-                        const tile = tiles[idx];
-                        if (this.validStates.includes(tile)) {
-                            context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
-                        }
-                    }
-                }
-            }
+            // for (let i = 0; i < squares; i++) {
+            //     for (let j = 0; j < squares; j++) {
+            //         let idx = i * squares + j;
+            //         if (idx < tiles.length) {
+            //             const tile = tiles[idx];
+            //             if (this.validStates.includes(tile)) {
+            //                 context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+            //             }
+            //         }
+            //     }
+            // }
         }
     }
     collapse() {
@@ -150,7 +149,10 @@ class GridSpot {
         const neighbors = [];
         for (let i = 0; i < this.validStates.length; i++) {
             for (let j = 0; j < this.validStates[i].validNeighbors[side].length; j++) {
-                neighbors.push(this.validStates[i].validNeighbors[side][j]);
+                let tile = this.validStates[i].validNeighbors[side][j];
+                if (!neighbors.includes(tile)) {
+                    neighbors.push(tile);
+                }
             }
         }
         return neighbors;
@@ -407,7 +409,7 @@ function calcTileSize() {
 
 
 //----------------------------------------------------------------------------//
-function propagate(idx) {
+function propagate(collapsedIdx) {
     const offsets = {
         top: [0, -1],
         right: [1, 0],
@@ -415,41 +417,44 @@ function propagate(idx) {
         left: [-1, 0],
     }
 
-    const stack = [idx];
+    let stack = [collapsedIdx];
 
     while (stack.length > 0) {
-        const currentIdx = stack.pop();
+        let currentIdx = stack.pop();
 
-        for (const side in offsets) {
+        for (let side in offsets) {
         
-            const x = currentIdx[0] + offsets[side][0];
-            const y = currentIdx[1] + offsets[side][1];
+            let otherIdx = [
+                currentIdx[0] + offsets[side][0],
+                currentIdx[1] + offsets[side][1]
+            ]
         
-            if (x < 0 || y < 0 || x >= DIMS_X || y >= DIMS_Y) {
+            // TODO: wrap?
+            if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
                 continue;
             }
 
-            const possibleNiegbors = grid[idx[0]][idx[1]].getPossibleNeighbors(side);
+            let otherPossibleStates = grid[otherIdx[0]][otherIdx[1]].validStates;
+            let possibleNiegbors = grid[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
 
-            if (grid[x][y].validStates.length == 0) {
-                console.log("aa");
+            if (otherPossibleStates.length == 0) {
+                console.log("aaaaa");
                 continue;
             }
 
-            for (const state of grid[x][y].validStates) {
-                if (!possibleNiegbors.includes(state)) {
-                    grid[x][y].validStates = grid[x][y].validStates.filter(s => s != state);
+            for (let otherState of otherPossibleStates) {
+                if (!possibleNiegbors.includes(otherState)) {
+                    grid[otherIdx[0]][otherIdx[1]].validStates = grid[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
 
                     let i = false;
                     for (let a = 0; a < stack.length; a++) {
-                        if (stack[a][0] == x && stack[a][1] == y) {
+                        if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
                             i = true;
                         }
                     }
-                    // TODO: this breaks everything
-                    // if (!i) {
-                    //     stack.push([x, y]);
-                    // }
+                    if (!i) {
+                        stack.push([otherIdx[0], otherIdx[1]]);
+                    }
                 }
             }
         }
@@ -464,16 +469,23 @@ function propagate(idx) {
 //----------------------------------------------------------------------------//
 function draw() {
 
-    // context.fillStyle = "black";
-    // context.fillRect(0, 0, canvas.width, canvas.height);
+    //------------------------------------------------------------------------//
+    context.fillStyle = "black";
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
+    context.strokeStyle = "white";
+    context.lineWidth = 2;
+    context.strokeRect(TILE_OFFSET_X, TILE_OFFSET_Y, DIMS_X * TILE_SIZE, DIMS_Y * TILE_SIZE);
+    //------------------------------------------------------------------------//
+
+    //------------------------------------------------------------------------//
     let lowestValidStates = tiles.length;
     let lowestValidStatesIds = [];
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             if (!grid[x][y].collapsed) {
                 if (grid[x][y].validStates.length == 0) {
-                    alert("TODO: - reset or all are collapsed");
+                    console.log("TODO: - reset or all are collapsed");
                     break;
                 } else if (grid[x][y].validStates.length < lowestValidStates) {
                     lowestValidStates = grid[x][y].validStates.length;
@@ -484,50 +496,41 @@ function draw() {
             }
         }
     }
-    console.log(lowestValidStates, lowestValidStatesIds);
+    //------------------------------------------------------------------------//
 
+    //------------------------------------------------------------------------//
     const idxToCollapse = randomFromList(lowestValidStatesIds);
     grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
 
-    console.log(grid);
-
     propagate(idxToCollapse);
+    //------------------------------------------------------------------------//
 
-    context.strokeStyle = "white";
-    context.lineWidth = 1;
-
+    //------------------------------------------------------------------------//
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x][y].draw(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y)
-            // context.drawImage(
-            //     grid[x][y],
+            // context.strokeRect(
             //     x * TILE_SIZE + TILE_OFFSET_X,
             //     y * TILE_SIZE + TILE_OFFSET_Y,
             //     TILE_SIZE,
             //     TILE_SIZE
             // );
-            // context.drawImage(tileImgOptions[x % 6], x * TILE_SIZE_X, y * TILE_SIZE_Y, TILE_SIZE_X, TILE_SIZE_Y);
-            context.strokeRect(
-                x * TILE_SIZE + TILE_OFFSET_X,
-                y * TILE_SIZE + TILE_OFFSET_Y,
-                TILE_SIZE,
-                TILE_SIZE
-            );
         }
     }
+    //------------------------------------------------------------------------//
 
 
-    // window.requestAnimationFrame(draw);
+    window.requestAnimationFrame(draw);
 }
 //----------------------------------------------------------------------------//
 
 
-document.addEventListener("keydown", keyDownHandle, false);
+// document.addEventListener("keydown", keyDownHandle, false);
 
-function keyDownHandle(e) {
-	switch (e.key.toLowerCase()) {
-        case "s":
-            window.requestAnimationFrame(draw);
-            break;       
-    }
-}
+// function keyDownHandle(e) {
+// 	switch (e.key.toLowerCase()) {
+//         case "s":
+//             window.requestAnimationFrame(draw);
+//             break;       
+//     }
+// }
