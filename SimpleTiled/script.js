@@ -234,6 +234,7 @@ function swapToCanvasAndStart() {
         }
     }
     tileImgOptions = filteredtileImgOptions;
+    console.log(tileImgOptions);
 
     // create tiles
     for (let i = 0; i < tileImgOptions.length; i++) {
