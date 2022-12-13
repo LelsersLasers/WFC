@@ -22,3 +22,15 @@
 2. Collapse cell
 	- Random choice of states
 3. Propogate
+
+## Fix/add
+
+- Weights
+    - Id each tile
+    - Collapse():
+        - Equal chance of picking each id, regardless of other rotations
+        - Once id is picked, pick random from remaining versions
+- Restart if stuck
+- Stop draw loop if it is finished
+- Propogate information out
+    - Use the "stack" described in the video
