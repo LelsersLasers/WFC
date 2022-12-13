@@ -1,11 +1,27 @@
+const DIMS_X = 25;
+const DIMS_Y = 25;
+
+const WRAP = false;
+
+const SOCKETS_PER_SIDE = 1;
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
+let DRAW_STATES = false;
+let DRAW_OUTLINE = true;
+let DRAW_EDGES = false;
+
+let LOOP = true;
+let FORCE_NEXT = true; // start by collapsing a tile
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
 const canvas = document.getElementById("mainCanvas");
 const context = setUpContext();
 
 const font = "monospace";
-
-
-const DIMS_X = 60;
-const DIMS_Y = 60;
 
 const TILE_SIZE = Math.floor(calcTileSize());
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
@@ -123,21 +139,21 @@ class GridSpot {
     draw(x, y) {
         if (this.collapsed) {
             context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
-        } else {
-            // const squares = Math.ceil(Math.sqrt(tiles.length));
-            // const squareSize = TILE_SIZE / squares;
+        } else if (DRAW_STATES) {
+            const squares = Math.ceil(Math.sqrt(tiles.length));
+            const squareSize = TILE_SIZE / squares;
 
-            // for (let i = 0; i < squares; i++) {
-            //     for (let j = 0; j < squares; j++) {
-            //         let idx = i * squares + j;
-            //         if (idx < tiles.length) {
-            //             const tile = tiles[idx];
-            //             if (this.validStates.includes(tile)) {
-            //                 context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
-            //             }
-            //         }
-            //     }
-            // }
+            for (let i = 0; i < squares; i++) {
+                for (let j = 0; j < squares; j++) {
+                    let idx = i * squares + j;
+                    if (idx < tiles.length) {
+                        const tile = tiles[idx];
+                        if (this.validStates.includes(tile)) {
+                            context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+                        }
+                    }
+                }
+            }
         }
     }
     collapse() {
@@ -238,7 +254,7 @@ function swapToCanvasAndStart() {
 
     // create tiles
     for (let i = 0; i < tileImgOptions.length; i++) {
-        tiles.push(new Tile(tileImgOptions[i], 1));
+        tiles.push(new Tile(tileImgOptions[i], SOCKETS_PER_SIDE));
     }
 
     // set valid neighbors for tiles
@@ -374,10 +390,8 @@ function getContextFromCanvas(canv, options = {}) {
     return ctx;
 }
 function setUpContext() {
-    // Get width/height of the browser window
     console.log("Window is ".concat(window.innerWidth, " by ").concat(window.innerHeight));
 
-    // Get the canvas, set the width and height from the window
     const maxW = window.innerWidth - 20;
     const maxH = window.innerHeight - 20;
 
@@ -386,10 +400,6 @@ function setUpContext() {
     canvas.width = maxW;
     canvas.height = maxH;
 
-    // canvas.onmousedown = () => mouseDown = true;
-    // canvas.onmouseup = () => mouseDown = false;
-
-    // Set up the context for the animation
     const context = getContextFromCanvas(canvas);
 
     context.textAlign = "center";
@@ -430,8 +440,10 @@ function propagate(collapsedIdx) {
                 currentIdx[1] + offsets[side][1]
             ]
         
-            // TODO: wrap?
-            if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
+            if (WRAP) {
+                otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
+                otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
+            } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
                 continue;
             }
 
@@ -458,12 +470,9 @@ function propagate(collapsedIdx) {
                     }
                 }
             }
-        }
-            
+        }      
     }
 }
-
-
 //----------------------------------------------------------------------------//
 
 
@@ -474,9 +483,11 @@ function draw() {
     context.fillStyle = "black";
     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    context.strokeStyle = "white";
-    context.lineWidth = 2;
-    context.strokeRect(TILE_OFFSET_X, TILE_OFFSET_Y, DIMS_X * TILE_SIZE, DIMS_Y * TILE_SIZE);
+    if (DRAW_OUTLINE) {
+        context.strokeStyle = "white";
+        context.lineWidth = 2;
+        context.strokeRect(TILE_OFFSET_X, TILE_OFFSET_Y, DIMS_X * TILE_SIZE, DIMS_Y * TILE_SIZE);
+    }
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
@@ -500,22 +511,29 @@ function draw() {
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
-    const idxToCollapse = randomFromList(lowestValidStatesIds);
-    grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
+    if (LOOP || FORCE_NEXT) {
+        const idxToCollapse = randomFromList(lowestValidStatesIds);
+        grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
 
-    propagate(idxToCollapse);
+        propagate(idxToCollapse);
+
+        FORCE_NEXT = false;
+    }
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x][y].draw(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y)
-            // context.strokeRect(
-            //     x * TILE_SIZE + TILE_OFFSET_X,
-            //     y * TILE_SIZE + TILE_OFFSET_Y,
-            //     TILE_SIZE,
-            //     TILE_SIZE
-            // );
+            if (DRAW_EDGES) {
+                context.lineWidth = 1;
+                context.strokeRect(
+                    x * TILE_SIZE + TILE_OFFSET_X,
+                    y * TILE_SIZE + TILE_OFFSET_Y,
+                    TILE_SIZE,
+                    TILE_SIZE
+                );
+            }
         }
     }
     //------------------------------------------------------------------------//
@@ -526,12 +544,30 @@ function draw() {
 //----------------------------------------------------------------------------//
 
 
-// document.addEventListener("keydown", keyDownHandle, false);
+//----------------------------------------------------------------------------//
 
-// function keyDownHandle(e) {
-// 	switch (e.key.toLowerCase()) {
-//         case "s":
-//             window.requestAnimationFrame(draw);
-//             break;       
-//     }
-// }
+document.addEventListener("keydown", keyDownHandle, false);
+
+function keyDownHandle(e) {
+    switch (e.key.toLowerCase()) {
+        case "enter":
+            LOOP = !LOOP;
+            break;    
+        case " ":
+            FORCE_NEXT = true;
+            break;
+        case "escape":
+            LOOP = false;
+            break;
+        case "d":
+            DRAW_STATES = !DRAW_STATES;
+            break;
+        case "o":
+            DRAW_OUTLINE = !DRAW_OUTLINE;
+            break;
+        case "e":
+            DRAW_EDGES = !DRAW_EDGES;
+            break;
+    }
+}
+//----------------------------------------------------------------------------//

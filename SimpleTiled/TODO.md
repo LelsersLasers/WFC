@@ -25,6 +25,7 @@
 
 ## Fix/add
 
+- Number of samples from socket
 - Weights
     - Id each tile
     - Collapse():
@@ -32,5 +33,13 @@
         - Once id is picked, pick random from remaining versions
 - Restart if stuck
 - Stop draw loop if it is finished
-- Propogate information out
-    - Use the "stack" described in the video
+- UI?
+
+## Keybinds
+
+- Enter: toggle auto progress
+- Space: progress 1 iteration
+- Escape: stop auto progress
+- D: toggle drawing valid states of non-collapsed cells
+- O: toggle drawing outline boarder of valid tile spots
+- E: toggle drawing outline around grid tiles
