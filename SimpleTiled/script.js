@@ -260,15 +260,20 @@ function swapToCanvasAndStart() {
     // set valid neighbors for tiles
     tiles.forEach((tile) => tile.analyzeTiles());
 
+    // create the grid of tiles that holds the states
+    setGrid();
+    
 
+    window.requestAnimationFrame(draw); // starts render loop
+}
+function setGrid() {
+    grid.length = 0;
     for (let x = 0; x < DIMS_X; x++) {
         grid.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x].push(new GridSpot());
         }
     }
-
-    window.requestAnimationFrame(draw); // starts render loop
 }
 //----------------------------------------------------------------------------//
 
@@ -301,7 +306,6 @@ function samePixels(img1, img2) {
 
     return true;
 }
-
 
 function flipX(src, callback) {
     const img = new Image()
@@ -493,11 +497,14 @@ function draw() {
     //------------------------------------------------------------------------//
     let lowestValidStates = tiles.length;
     let lowestValidStatesIds = [];
+    let fullyCollapsed = true;
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             if (!grid[x][y].collapsed) {
+                fullyCollapsed = false;
                 if (grid[x][y].validStates.length == 0) {
-                    console.log("TODO: - reset or all are collapsed");
+                    console.log("Knotted! Unable to progress, starting over...")
+                    setGrid();
                     break;
                 } else if (grid[x][y].validStates.length < lowestValidStates) {
                     lowestValidStates = grid[x][y].validStates.length;
@@ -508,9 +515,13 @@ function draw() {
             }
         }
     }
-    //------------------------------------------------------------------------//
 
-    //------------------------------------------------------------------------//
+    if (fullyCollapsed) {
+        LOOP = false;
+        FORCE_NEXT = false;
+        console.log("Fully collapsed!");
+    }
+    
     if (LOOP || FORCE_NEXT) {
         const idxToCollapse = randomFromList(lowestValidStatesIds);
         grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
@@ -567,6 +578,9 @@ function keyDownHandle(e) {
             break;
         case "e":
             DRAW_EDGES = !DRAW_EDGES;
+            break;
+        case "r":
+            setGrid();
             break;
     }
 }
