@@ -2,16 +2,10 @@
 
 - Async properly
 	- Fix 2 sec wait
-- Dynamically/programtically choose socket locations
-
-## Fix/add
-
-- Number of samples from socket
-- Restart if stuck
-- Stop draw loop if it is finished
 - UI?
 	- Checkboxes for rotations/flips
 	- Set per image weights
+	- Choose which tiles can be next to other tiles?
 - Localstorage?
 
 ## Keybinds

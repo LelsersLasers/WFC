@@ -1,9 +1,9 @@
-const DIMS_X = 25;
-const DIMS_Y = 25;
+const DIMS_X = 60;
+const DIMS_Y = 60;
 
 const WRAP = false;
 
-const SOCKETS_PER_SIDE = 1;
+const SOCKETS_PER_SIDE = 3;
 //----------------------------------------------------------------------------//
 
 
@@ -21,7 +21,10 @@ let FORCE_NEXT = true; // start by collapsing a tile
 const canvas = document.getElementById("mainCanvas");
 const context = setUpContext();
 
-const font = "monospace";
+// const font = "monospace";
+
+// let delta = 1/60;
+// let lastTime = performance.now();
 
 const TILE_SIZE = Math.floor(calcTileSize());
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
@@ -81,8 +84,6 @@ class Tile {
         }
     }
     setSockets(socketsPerSide) {
-        const middle = Math.ceil(TILE_SIZE / 2);
-
         const canv = document.createElement("canvas");
         canv.width = TILE_SIZE;
         canv.height = TILE_SIZE;
@@ -90,21 +91,44 @@ class Tile {
         const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
         ctx.drawImage(this.img, 0, 0, TILE_SIZE, TILE_SIZE);
 
-        if (socketsPerSide === 1) {
-            const spots = {
-                top:    [middle, 0],
-                right:  [TILE_SIZE - 1, middle],
-                bottom: [middle, TILE_SIZE - 1],
-                left:   [0, middle],
-            }
-            for (let side in spots) {
-                const x = spots[side][0];
-                const y = spots[side][1];
-                const pixel = ctx.getImageData(x, y, 1, 1).data;
-                this.sockets[side] = new Socket([new Color(pixel[0], pixel[1], pixel[2])]);
+        const spots = {
+            top:    [],
+            right:  [],
+            bottom: [],
+            left:   [],
+        }
+
+        if (socketsPerSide === 1 || socketsPerSide % 2 === 0) {
+            const step = TILE_SIZE / (socketsPerSide + 1);
+            for (let i = 0; i < socketsPerSide; i++) {
+                const spot = Math.floor((i + 1) * step);
+                spots.top.push([spot, 0]);
+                spots.right.push([TILE_SIZE - 1, spot]);
+                spots.bottom.push([spot, TILE_SIZE - 1]);
+                spots.left.push([0, spot]);
             }
         } else {
-            alert("TODO!")
+            const step = (TILE_SIZE - 1) / (socketsPerSide - 1);
+            for (let i = 0; i < socketsPerSide; i++) {
+                const spot = Math.floor(i * step);
+                spots.top.push([spot, 0]);
+                spots.right.push([TILE_SIZE - 1, spot]);
+                spots.bottom.push([spot, TILE_SIZE - 1]);
+                spots.left.push([0, spot]);
+            }
+        }
+
+        spots.bottom.reverse();
+        spots.left.reverse();
+
+        for (let side in spots) {
+            this.sockets[side] = new Socket([]);
+            for (let i = 0; i < spots[side].length; i++) {
+                const x = spots[side][i][0];
+                const y = spots[side][i][1];
+                const pixel = ctx.getImageData(x, y, 1, 1).data;
+                this.sockets[side].ids.push(new Color(pixel[0], pixel[1], pixel[2]));
+            }
         }
     }
     analyzeTiles() {
@@ -383,6 +407,10 @@ function reset() {
 function randomFromList(lst) {
     return lst[Math.floor(Math.random() * lst.length)];
 }
+// function setDelta() {
+//     delta = performance.now() - lastTime;
+//     lastTime = performance.now();
+// }
 //----------------------------------------------------------------------------//
 
 
@@ -461,7 +489,6 @@ function propagate(collapsedIdx) {
             let possibleNiegbors = grid[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
 
             if (otherPossibleStates.length == 0) {
-                console.log("aaaaa");
                 continue;
             }
 
@@ -555,6 +582,8 @@ function draw() {
     }
     //------------------------------------------------------------------------//
 
+
+    // setDelta();
 
     window.requestAnimationFrame(draw);
 }
