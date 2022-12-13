@@ -63,8 +63,9 @@ class Socket {
 }
 
 class Tile {
-    constructor(img, socketsPerSide) {
+    constructor(img, id, socketsPerSide) {
         this.img = img;
+        this.id = id
         this.sockets = {
             top:    new Socket([]),
             right:  new Socket([]),
@@ -158,6 +159,11 @@ class GridSpot {
     }
     collapse() {
         this.collapsed = true;
+
+        const ids = [...new Set(this.validStates.map(state => state.id))];
+        const id = randomFromList(ids);
+        this.validStates = this.validStates.filter(state => state.id === id);
+        
         this.collapsedState = randomFromList(this.validStates);
         this.validStates = [this.collapsedState];
     }
@@ -211,7 +217,7 @@ document.getElementById("files").addEventListener("change", (e) => {
                         flipY(img.src, (newSrc) => img.src = newSrc);
                     }
 
-                    tileImgOptions.push(img);
+                    tileImgOptions.push([img, i]);
                     filesToWaitFor--;
                     if (filesToWaitFor <= 0) {
                         // TODO: better solution
@@ -241,7 +247,7 @@ function swapToCanvasAndStart() {
     for (let i = 0; i < tileImgOptions.length; i++) {
         let inList = false;
         for (let j = 0; j < filteredtileImgOptions.length; j++) {
-            if (samePixels(tileImgOptions[i], filteredtileImgOptions[j])) {
+            if (samePixels(tileImgOptions[i][0], filteredtileImgOptions[j][0])) {
                 inList = true;
             }
         }
@@ -254,7 +260,7 @@ function swapToCanvasAndStart() {
 
     // create tiles
     for (let i = 0; i < tileImgOptions.length; i++) {
-        tiles.push(new Tile(tileImgOptions[i], SOCKETS_PER_SIDE));
+        tiles.push(new Tile(tileImgOptions[i][0], tileImgOptions[i][1], SOCKETS_PER_SIDE));
     }
 
     // set valid neighbors for tiles
