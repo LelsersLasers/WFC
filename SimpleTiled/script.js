@@ -125,15 +125,17 @@ class GridSpot {
         if (this.collapsed) {
             context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
         } else {
-            const squares = Math.ceil(Math.sqrt(this.validStates.length));
+            const squares = Math.ceil(Math.sqrt(tiles.length));
             const squareSize = TILE_SIZE / squares;
 
             for (let i = 0; i < squares; i++) {
                 for (let j = 0; j < squares; j++) {
                     let idx = i * squares + j;
-                    if (idx < this.validStates.length) {
-                        const tile = this.validStates[idx];
-                        context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+                    if (idx < tiles.length) {
+                        const tile = tiles[idx];
+                        if (this.validStates.includes(tile)) {
+                            context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+                        }
                     }
                 }
             }
@@ -143,6 +145,15 @@ class GridSpot {
         this.collapsed = true;
         this.collapsedState = randomFromList(this.validStates);
         this.validStates = [this.collapsedState];
+    }
+    getPossibleNeighbors(side) {
+        const neighbors = [];
+        for (let i = 0; i < this.validStates.length; i++) {
+            for (let j = 0; j < this.validStates[i].validNeighbors[side].length; j++) {
+                neighbors.push(this.validStates[i].validNeighbors[side][j]);
+            }
+        }
+        return neighbors;
     }
 }
 //----------------------------------------------------------------------------//
@@ -396,17 +407,74 @@ function calcTileSize() {
 
 
 //----------------------------------------------------------------------------//
+function propagate(idx) {
+    const offsets = {
+        top: [0, -1],
+        right: [1, 0],
+        bottom: [0, 1],
+        left: [-1, 0],
+    }
+
+    const stack = [idx];
+
+    while (stack.length > 0) {
+        const currentIdx = stack.pop();
+
+        for (const side in offsets) {
+        
+            const x = currentIdx[0] + offsets[side][0];
+            const y = currentIdx[1] + offsets[side][1];
+        
+            if (x < 0 || y < 0 || x >= DIMS_X || y >= DIMS_Y) {
+                continue;
+            }
+
+            const possibleNiegbors = grid[idx[0]][idx[1]].getPossibleNeighbors(side);
+
+            if (grid[x][y].validStates.length == 0) {
+                console.log("aa");
+                continue;
+            }
+
+            for (const state of grid[x][y].validStates) {
+                if (!possibleNiegbors.includes(state)) {
+                    grid[x][y].validStates = grid[x][y].validStates.filter(s => s != state);
+
+                    let i = false;
+                    for (let a = 0; a < stack.length; a++) {
+                        if (stack[a][0] == x && stack[a][1] == y) {
+                            i = true;
+                        }
+                    }
+                    // TODO: this breaks everything
+                    // if (!i) {
+                    //     stack.push([x, y]);
+                    // }
+                }
+            }
+        }
+            
+    }
+}
+
+
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
 function draw() {
 
     // context.fillStyle = "black";
     // context.fillRect(0, 0, canvas.width, canvas.height);
+
     let lowestValidStates = tiles.length;
     let lowestValidStatesIds = [];
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             if (!grid[x][y].collapsed) {
                 if (grid[x][y].validStates.length == 0) {
-                    alert("TODO: - reset")
+                    alert("TODO: - reset or all are collapsed");
+                    break;
                 } else if (grid[x][y].validStates.length < lowestValidStates) {
                     lowestValidStates = grid[x][y].validStates.length;
                     lowestValidStatesIds = [[x, y]];
@@ -416,10 +484,14 @@ function draw() {
             }
         }
     }
-    console.log(lowestValidStatesIds);
+    console.log(lowestValidStates, lowestValidStatesIds);
 
     const idxToCollapse = randomFromList(lowestValidStatesIds);
     grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
+
+    console.log(grid);
+
+    propagate(idxToCollapse);
 
     context.strokeStyle = "white";
     context.lineWidth = 1;
@@ -449,19 +521,6 @@ function draw() {
 }
 //----------------------------------------------------------------------------//
 
-
-// function pick(event) {
-//     const bounding = canvas.getBoundingClientRect();
-//     const x = event.clientX - bounding.left;
-//     const y = event.clientY - bounding.top;
-//     const pixel = context.getImageData(x, y, 1, 1);
-//     const data = pixel.data;
-  
-//     const rgba = `${data[0]}, ${data[1]}, ${data[2]}, ${data[3] / 255}`;
-//     console.log(rgba);
-// }
-  
-// canvas.addEventListener("mousemove", (event) => pick(event));
 
 document.addEventListener("keydown", keyDownHandle, false);
 
