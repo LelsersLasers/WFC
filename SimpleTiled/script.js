@@ -1,7 +1,9 @@
-const DIMS_X = 60;
-const DIMS_Y = 60;
+const DIMS_X = 77;
+const DIMS_Y = 37;
 
 const WRAP = false;
+
+const SPEED = 3;
 
 const SOCKETS_PER_SIDE = 3;
 //----------------------------------------------------------------------------//
@@ -179,6 +181,13 @@ class GridSpot {
                     }
                 }
             }
+            /*
+            context.globalAlpha = 1 / tiles.length;
+            for (let state of this.validStates) {
+                context.drawImage(state.img, x, y, TILE_SIZE, TILE_SIZE);
+            }
+            context.globalAlpha = 1;
+            */
         }
     }
     collapse() {
@@ -458,6 +467,35 @@ function calcTileSize() {
 
 
 //----------------------------------------------------------------------------//
+function findLowestEntropySpots() {
+    let lowestValidStates = tiles.length;
+    let lowestValidStatesIds = [];
+    let fullyCollapsed = true;
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            if (!grid[x][y].collapsed) {
+                fullyCollapsed = false;
+                if (grid[x][y].validStates.length == 0) {
+                    console.log("Knotted! Unable to progress, starting over...")
+                    setGrid();
+                    break;
+                } else if (grid[x][y].validStates.length < lowestValidStates) {
+                    lowestValidStates = grid[x][y].validStates.length;
+                    lowestValidStatesIds = [[x, y]];
+                } else if (grid[x][y].validStates.length == lowestValidStates) {
+                    lowestValidStatesIds.push([x, y]);
+                }
+            }
+        }
+    }
+
+    if (fullyCollapsed) {
+        LOOP = false;
+        FORCE_NEXT = false;
+        console.log("Fully collapsed!");
+    }
+    return lowestValidStatesIds;
+}
 function propagate(collapsedIdx) {
     const offsets = {
         top: [0, -1],
@@ -510,6 +548,17 @@ function propagate(collapsedIdx) {
         }      
     }
 }
+function iterate() {
+    const lowestValidStatesIds = findLowestEntropySpots();
+    if (LOOP || FORCE_NEXT) {
+        const idxToCollapse = randomFromList(lowestValidStatesIds);
+        grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
+
+        propagate(idxToCollapse);
+
+        FORCE_NEXT = false;
+    }
+}
 //----------------------------------------------------------------------------//
 
 
@@ -528,40 +577,8 @@ function draw() {
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
-    let lowestValidStates = tiles.length;
-    let lowestValidStatesIds = [];
-    let fullyCollapsed = true;
-    for (let x = 0; x < DIMS_X; x++) {
-        for (let y = 0; y < DIMS_Y; y++) {
-            if (!grid[x][y].collapsed) {
-                fullyCollapsed = false;
-                if (grid[x][y].validStates.length == 0) {
-                    console.log("Knotted! Unable to progress, starting over...")
-                    setGrid();
-                    break;
-                } else if (grid[x][y].validStates.length < lowestValidStates) {
-                    lowestValidStates = grid[x][y].validStates.length;
-                    lowestValidStatesIds = [[x, y]];
-                } else if (grid[x][y].validStates.length == lowestValidStates) {
-                    lowestValidStatesIds.push([x, y]);
-                }
-            }
-        }
-    }
-
-    if (fullyCollapsed) {
-        LOOP = false;
-        FORCE_NEXT = false;
-        console.log("Fully collapsed!");
-    }
-    
-    if (LOOP || FORCE_NEXT) {
-        const idxToCollapse = randomFromList(lowestValidStatesIds);
-        grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
-
-        propagate(idxToCollapse);
-
-        FORCE_NEXT = false;
+    for (let i = 0; i < SPEED; i++) {
+        iterate();
     }
     //------------------------------------------------------------------------//
 
