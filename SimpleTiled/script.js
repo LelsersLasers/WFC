@@ -23,8 +23,8 @@ const context = setUpContext();
 
 // const font = "monospace";
 
-// let delta = 1/60;
-// let lastTime = performance.now();
+let delta = 1/60;
+let lastTime = performance.now();
 
 const TILE_SIZE = Math.floor(calcTileSize());
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
@@ -407,10 +407,10 @@ function reset() {
 function randomFromList(lst) {
     return lst[Math.floor(Math.random() * lst.length)];
 }
-// function setDelta() {
-//     delta = performance.now() - lastTime;
-//     lastTime = performance.now();
-// }
+function setDelta() {
+    delta = performance.now() - lastTime;
+    lastTime = performance.now();
+}
 //----------------------------------------------------------------------------//
 
 
