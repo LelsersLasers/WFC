@@ -1,0 +1,20 @@
+# Overlapping Model
+
+Takes 1 input image.
+
+## Keybinds
+
+<!-- - Enter: toggle auto progress
+- Space: progress 1 iteration
+- Escape: stop auto progress
+- D: toggle drawing valid states of non-collapsed cells
+- O: toggle drawing outline boarder of valid tile spots
+- E: toggle drawing outline around grid tiles
+- R: reset grid -->
+
+## Todo?
+
+- Everything
+- Resources:
+	- https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
+	- https://github.com/mxgmn/WaveFunctionCollapse
