@@ -5,17 +5,16 @@ const WRAP = false;
 
 const SPEED = 3;
 
-const SOCKETS_PER_SIDE = 3;
+const N = 3;
 //----------------------------------------------------------------------------//
 
 
 //----------------------------------------------------------------------------//
 let DRAW_STATES = false;
-let DRAW_OUTLINE = true;
 let DRAW_EDGES = false;
 
 let LOOP = true;
-let FORCE_NEXT = true; // start by collapsing a tile
+let FORCE_NEXT = true;
 //----------------------------------------------------------------------------//
 
 
@@ -32,8 +31,11 @@ const TILE_SIZE = Math.floor(calcTileSize());
 const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
 const TILE_OFFSET_Y = (canvas.height - (TILE_SIZE * DIMS_Y)) / 2;
 
-let tileImgOptions = [];
-let tiles = [];
+let sourceImg = new Image();
+
+let patterns = [];
+let uniqueColors = [];
+
 const grid = [];
 //----------------------------------------------------------------------------//
 
@@ -50,222 +52,163 @@ class Color {
     }
 }
 
-class Socket {
-    // clockwise labeled
-    // id: list of Color
-    constructor(ids) {
-        this.ids = ids;
+class Overlap {
+    constructor(pattern, offset_x, offset_y) {
+        this.pattern = pattern;
+        this.offset_x = offset_x;
+        this.offset_y = offset_y;
     }
     matches(other) {
-        const otherIds = other.ids.slice().reverse();
-        for (let i = 0; i < this.ids.length; i++) {
-            if (!this.ids[i].matches(otherIds[i])) {
-                return false;
+        return this.pattern.matches(other.pattern) && this.offset_x === other.offset_x && this.offset_y === other.offset_y;
+    }
+}
+
+class Pattern {
+    constructor(offsetX, offsetY) {
+
+        const canv = document.createElement("canvas");
+        canv.width = sourceImg.width;
+        canv.height = sourceImg.height;
+        const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
+
+        ctx.drawImage(sourceImg, 0, 0, sourceImg.width, sourceImg.height);
+
+        this.colors = [];
+
+        for (let i = 0; i < N; i++) {
+            this.colors.push([]);
+        }
+
+        for (let x = 0; x < N; x++) {
+            for (let y = 0; y < N; y++) {
+                const spotX = (x + offsetX) % sourceImg.width;
+                const spotY = (y + offsetY) % sourceImg.height;
+                
+                const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
+                
+                const color = new Color(pixel[0], pixel[1], pixel[2]);
+                this.colors[x][y] = color;
+
+                if (!uniqueColors.some(c => c.matches(color))) {
+                    uniqueColors.push(color);
+                }
+            }
+        }
+
+        this.overlaps = [];
+    }
+    matches(other) {
+        for (let x = 0; x < N; x++) {
+            for (let y = 0; y < N; y++) {
+                if (!this.colors[x][y].matches(other.colors[x][y])) {
+                    return false;
+                }
             }
         }
         return true;
     }
-}
-
-class Tile {
-    constructor(img, id, socketsPerSide) {
-        this.img = img;
-        this.id = id
-        this.sockets = {
-            top:    new Socket([]),
-            right:  new Socket([]),
-            bottom: new Socket([]),
-            left:   new Socket([]),
-        };
-        this.setSockets(socketsPerSide);
-        this.validNeighbors = {
-            top:    [],
-            right:  [],
-            bottom: [],
-            left:   [],
-        }
-    }
-    setSockets(socketsPerSide) {
-        const canv = document.createElement("canvas");
-        canv.width = TILE_SIZE;
-        canv.height = TILE_SIZE;
-
-        const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
-        ctx.drawImage(this.img, 0, 0, TILE_SIZE, TILE_SIZE);
-
-        const spots = {
-            top:    [],
-            right:  [],
-            bottom: [],
-            left:   [],
-        }
-
-        if (socketsPerSide === 1 || socketsPerSide % 2 === 0) {
-            const step = TILE_SIZE / (socketsPerSide + 1);
-            for (let i = 0; i < socketsPerSide; i++) {
-                const spot = Math.floor((i + 1) * step);
-                spots.top.push([spot, 0]);
-                spots.right.push([TILE_SIZE - 1, spot]);
-                spots.bottom.push([spot, TILE_SIZE - 1]);
-                spots.left.push([0, spot]);
-            }
-        } else {
-            const step = (TILE_SIZE - 1) / (socketsPerSide - 1);
-            for (let i = 0; i < socketsPerSide; i++) {
-                const spot = Math.floor(i * step);
-                spots.top.push([spot, 0]);
-                spots.right.push([TILE_SIZE - 1, spot]);
-                spots.bottom.push([spot, TILE_SIZE - 1]);
-                spots.left.push([0, spot]);
-            }
-        }
-
-        spots.bottom.reverse();
-        spots.left.reverse();
-
-        for (let side in spots) {
-            this.sockets[side] = new Socket([]);
-            for (let i = 0; i < spots[side].length; i++) {
-                const x = spots[side][i][0];
-                const y = spots[side][i][1];
-                const pixel = ctx.getImageData(x, y, 1, 1).data;
-                this.sockets[side].ids.push(new Color(pixel[0], pixel[1], pixel[2]));
-            }
-        }
-    }
-    analyzeTiles() {
-        // uses global tiles
-
-        const oppositeSide =  {
-            top:    "bottom",
-            right:  "left",
-            bottom: "top",
-            left:   "right",
-        }
-
-        for (let i = 0; i < tiles.length; i++) {
-            for (let side in this.sockets) {
-                const thisSocket = this.sockets[side];
-                const oppositeSocket = oppositeSide[side];
-                const otherSocket = tiles[i].sockets[oppositeSocket];
-
-                if (thisSocket.matches(otherSocket)) {
-                    this.validNeighbors[side].push(tiles[i]);
-                }
-            }
-        }
-    }
-}
-
-class GridSpot {
-    constructor() {
-        this.validStates = tiles.slice();
-        this.collapsed = false;
-        this.collapsedState = null;
-    }
-    draw(x, y) {
-        if (this.collapsed) {
-            context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
-        } else if (DRAW_STATES) {
-            const squares = Math.ceil(Math.sqrt(tiles.length));
-            const squareSize = TILE_SIZE / squares;
-
-            for (let i = 0; i < squares; i++) {
-                for (let j = 0; j < squares; j++) {
-                    let idx = i * squares + j;
-                    if (idx < tiles.length) {
-                        const tile = tiles[idx];
-                        if (this.validStates.includes(tile)) {
-                            context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+    analyzePatterns() {
+        for (let i = 0; i < patterns.length; i++) {
+            for (let offsetX = -N + 1; offsetX < N; offsetX++) {
+                for (let offsetY = -N + 1; offsetY < N; offsetY++) {
+                    if (offsetX === 0 && offsetY === 0) {
+                        continue;
+                    }
+                    let validPattern = true;
+                    PER_SPOT: for (let patternX = 0; patternX < N; patternX++) {
+                        for (let patternY = 0; patternY < N; patternY++) {
+                            const otherPatternX = patternX + offsetX;
+                            const otherPatternY = patternY + offsetY;
+                            if (otherPatternX < 0 || otherPatternX >= N || otherPatternY < 0 || otherPatternY >= N) {
+                                continue;
+                            }
+                            if (!this.colors[patternX][patternY].matches(patterns[i].colors[otherPatternX][otherPatternY])) {
+                                validPattern = false;
+                                break PER_SPOT;
+                            }
                         }
                     }
-                }
-            }
-            /*
-            context.globalAlpha = 1 / tiles.length;
-            for (let state of this.validStates) {
-                context.drawImage(state.img, x, y, TILE_SIZE, TILE_SIZE);
-            }
-            context.globalAlpha = 1;
-            */
-        }
-    }
-    collapse() {
-        this.collapsed = true;
-
-        const ids = [...new Set(this.validStates.map(state => state.id))];
-        const id = randomFromList(ids);
-        this.validStates = this.validStates.filter(state => state.id === id);
-        
-        this.collapsedState = randomFromList(this.validStates);
-        this.validStates = [this.collapsedState];
-    }
-    getPossibleNeighbors(side) {
-        const neighbors = [];
-        for (let i = 0; i < this.validStates.length; i++) {
-            for (let j = 0; j < this.validStates[i].validNeighbors[side].length; j++) {
-                let tile = this.validStates[i].validNeighbors[side][j];
-                if (!neighbors.includes(tile)) {
-                    neighbors.push(tile);
+                    if (validPattern) {
+                        this.overlaps.push(new Overlap(patterns[i], offsetX, offsetY));
+                    }
                 }
             }
         }
-        return neighbors;
     }
 }
+
+// class GridSpot {
+//     constructor() {
+//         this.validStates = tiles.slice();
+//         this.collapsed = false;
+//         this.collapsedState = null;
+//     }
+//     draw(x, y) {
+//         if (this.collapsed) {
+//             context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
+//         } else if (DRAW_STATES) {
+//             const squares = Math.ceil(Math.sqrt(tiles.length));
+//             const squareSize = TILE_SIZE / squares;
+
+//             for (let i = 0; i < squares; i++) {
+//                 for (let j = 0; j < squares; j++) {
+//                     let idx = i * squares + j;
+//                     if (idx < tiles.length) {
+//                         const tile = tiles[idx];
+//                         if (this.validStates.includes(tile)) {
+//                             context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
+//                         }
+//                     }
+//                 }
+//             }
+//             /*
+//             context.globalAlpha = 1 / tiles.length;
+//             for (let state of this.validStates) {
+//                 context.drawImage(state.img, x, y, TILE_SIZE, TILE_SIZE);
+//             }
+//             context.globalAlpha = 1;
+//             */
+//         }
+//     }
+//     collapse() {
+//         this.collapsed = true;
+
+//         const ids = [...new Set(this.validStates.map(state => state.id))];
+//         const id = randomFromList(ids);
+//         this.validStates = this.validStates.filter(state => state.id === id);
+        
+//         this.collapsedState = randomFromList(this.validStates);
+//         this.validStates = [this.collapsedState];
+//     }
+//     getPossibleNeighbors(side) {
+//         const neighbors = [];
+//         for (let i = 0; i < this.validStates.length; i++) {
+//             for (let j = 0; j < this.validStates[i].validNeighbors[side].length; j++) {
+//                 let tile = this.validStates[i].validNeighbors[side][j];
+//                 if (!neighbors.includes(tile)) {
+//                     neighbors.push(tile);
+//                 }
+//             }
+//         }
+//         return neighbors;
+//     }
+// }
 //----------------------------------------------------------------------------//
 
 
 //----------------------------------------------------------------------------//
-document.getElementById("files").addEventListener("change", (e) => {
-    tileImgOptions.length = 0;
-
-    if (window.File && window.FileReader && window.FileList && window.Blob) {
-        const files = e.target.files;
-
-        const filteredFiles = [];
-        for (let i = 0; i < files.length; i++) {
-            if (files[i].type.match("image")) {
-                filteredFiles.push(files[i]);
-            }
-        }
-
-        // 4 rotations + 2 flips = 6
-        let = filesToWaitFor = filteredFiles.length * 6;
-
-        for (let i = 0; i < filteredFiles.length; i++) {
-            const imgReader = new FileReader();
-            imgReader.addEventListener("load", function (event) {
-                for (r = 0; r < 6; r++) {
-                    const imgFile = event.target;
-                    const img = new Image();
-
-                    img.src = imgFile.result;
-                    if (r < 4) {
-                        // r * 90 = degrees rotated
-                        rotate(img.src, r, (newSrc) => img.src = newSrc);
-                    } else if (r === 4) {
-                        flipX(img.src, (newSrc) => img.src = newSrc);
-                    } else if (r === 5) {
-                        flipY(img.src, (newSrc) => img.src = newSrc);
-                    }
-
-                    tileImgOptions.push([img, i]);
-                    filesToWaitFor--;
-                    if (filesToWaitFor <= 0) {
-                        // TODO: better solution
-                        // 2 sec delay to wait for files to load
-                        setTimeout(() => {
-                            swapToCanvasAndStart()
-                        }, 2000);
-                    }
-                }
-            });
-            imgReader.readAsDataURL(filteredFiles[i]);
-        }
-    } else {
-        alert("Your browser does not support File API");
-    }
+document.getElementById("fileInput").addEventListener("change", (e) => {
+    patterns.length = 0;
+    const input = e.target;
+    const reader = new FileReader();
+    reader.onload = function(){
+        const dataURL = reader.result;
+        sourceImg.src = dataURL;
+    };
+    reader.readAsDataURL(input.files[0]);
+    setTimeout(() => {
+        swapToCanvasAndStart()
+    }, 2000);
 });
 //----------------------------------------------------------------------------//
 
@@ -273,35 +216,29 @@ document.getElementById("files").addEventListener("change", (e) => {
 //----------------------------------------------------------------------------//
 function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
-    document.getElementById("files").setAttribute("hidden", "");
+    document.getElementById("fileInput").setAttribute("hidden", "");
 
-    // remove duplicate images
-    const filteredtileImgOptions = [];
-    for (let i = 0; i < tileImgOptions.length; i++) {
-        let inList = false;
-        for (let j = 0; j < filteredtileImgOptions.length; j++) {
-            if (samePixels(tileImgOptions[i][0], filteredtileImgOptions[j][0])) {
-                inList = true;
+    console.log(sourceImg);
+
+    for (let x = 0; x < sourceImg.width; x++) {
+        for (let y = 0; y < sourceImg.height; y++) {
+            // TODO: weighting patterns
+            const pattern = new Pattern(x, y);
+            if (!patterns.some(p => p.matches(pattern))) {
+                patterns.push(pattern);
             }
         }
-        if (!inList) {
-            filteredtileImgOptions.push(tileImgOptions[i]);
-        }
-    }
-    tileImgOptions = filteredtileImgOptions;
-    console.log(tileImgOptions);
-
-    // create tiles
-    for (let i = 0; i < tileImgOptions.length; i++) {
-        tiles.push(new Tile(tileImgOptions[i][0], tileImgOptions[i][1], SOCKETS_PER_SIDE));
     }
 
-    // set valid neighbors for tiles
-    tiles.forEach((tile) => tile.analyzeTiles());
+    console.log(patterns);
+
+    // precalculate valid overlaps
+    patterns.forEach((pattern) => pattern.analyzePatterns());
+
+    alert("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
     // create the grid of tiles that holds the states
-    setGrid();
-    
+    setGrid();    
 
     window.requestAnimationFrame(draw); // starts render loop
 }
@@ -312,98 +249,6 @@ function setGrid() {
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x].push(new GridSpot());
         }
-    }
-}
-//----------------------------------------------------------------------------//
-
-
-//----------------------------------------------------------------------------//
-function samePixels(img1, img2) {
-    const canvas1 = document.createElement("canvas");
-    const canvas2 = document.createElement("canvas");
-
-    canvas1.width = TILE_SIZE;
-    canvas1.height = TILE_SIZE;
-    
-    canvas2.width = TILE_SIZE;
-    canvas2.height = TILE_SIZE;
-
-    const ctx1 = getContextFromCanvas(canvas1, {willReadFrequently: true});
-    const ctx2 = getContextFromCanvas(canvas2, {willReadFrequently: true});
-
-    ctx1.drawImage(img1, 0, 0, TILE_SIZE, TILE_SIZE);
-    ctx2.drawImage(img2, 0, 0, TILE_SIZE, TILE_SIZE);
-
-    const data1 = ctx1.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data;
-    const data2 = ctx2.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data;
-
-    for (let i = 0; i < data1.length; i++) {
-        if (data1[i] !== data2[i]) {
-            return false;
-        }
-    }
-
-    return true;
-}
-
-function flipX(src, callback) {
-    const img = new Image()
-    img.src = src;
-    img.onload = function() {
-        const canv = document.createElement('canvas');
-        canv.width = TILE_SIZE;
-        canv.height = TILE_SIZE;
-        canv.style.position = "absolute";
-        const ctx = getContextFromCanvas(canv);
-        ctx.translate(TILE_SIZE, 0);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
-        callback(canv.toDataURL());
-    }
-}
-function flipY(src, callback) {
-    const img = new Image()
-    img.src = src;
-    img.onload = function() {
-        const canv = document.createElement('canvas');
-        canv.width = TILE_SIZE;
-        canv.height = TILE_SIZE;
-        canv.style.position = "absolute";
-        const ctx = getContextFromCanvas(canv);
-        ctx.translate(0, TILE_SIZE);
-        ctx.scale(1, -1);
-        ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
-        callback(canv.toDataURL());
-    }
-}
-function rotate(src, r, callback) {
-    const img = new Image()
-    img.src = src;
-    img.onload = function() {
-        const canv = document.createElement('canvas');
-        canv.width = TILE_SIZE;
-        canv.height = TILE_SIZE;
-        canv.style.position = "absolute";
-        const ctx = getContextFromCanvas(canv);
-
-        switch (r) {
-            case 0: break;   // 0 degrees
-            case 1:         // 90 degrees
-                ctx.translate(TILE_SIZE, 0);
-                ctx.rotate(Math.PI / 2);
-                break;
-            case 2:         // 180 degrees
-                ctx.translate(TILE_SIZE, TILE_SIZE);
-                ctx.rotate(Math.PI);
-                break;
-            case 3:         // 270 degrees
-                ctx.translate(0, TILE_SIZE);
-                ctx.rotate(Math.PI * 3 / 2);
-                break;
-        }
-        
-        ctx.drawImage(img, 0, 0, TILE_SIZE, TILE_SIZE);
-        callback(canv.toDataURL());
     }
 }
 //----------------------------------------------------------------------------//
