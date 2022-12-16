@@ -1,7 +1,7 @@
-const DIMS_X = 77;
-const DIMS_Y = 37;
+const DIMS_X = 3;
+const DIMS_Y = 3;
 
-const WRAP = false;
+// const WRAP = false;
 
 const SPEED = 3;
 
@@ -10,10 +10,11 @@ const N = 3;
 
 
 //----------------------------------------------------------------------------//
-let DRAW_STATES = false;
+let DRAW_STATES = true;
+let DRAW_OUTLINE = true;
 let DRAW_EDGES = false;
 
-let LOOP = true;
+let LOOP = false;
 let FORCE_NEXT = true;
 //----------------------------------------------------------------------------//
 
@@ -34,9 +35,9 @@ const TILE_OFFSET_Y = (canvas.height - (TILE_SIZE * DIMS_Y)) / 2;
 let sourceImg = new Image();
 
 let patterns = [];
-let uniqueColors = [];
 
-const wave = [];
+const W = []
+const H = [];
 //----------------------------------------------------------------------------//
 
 
@@ -49,6 +50,9 @@ class Color {
     }
     matches(other) {
         return this.r === other.r && this.g === other.g && this.b === other.b && this.a === other.a;
+    }
+    toRgb() {
+        return `rgb(${this.r}, ${this.g}, ${this.b})`;
     }
 }
 
@@ -89,9 +93,9 @@ class Pattern {
                 const color = new Color(pixel[0], pixel[1], pixel[2]);
                 this.colors[x][y] = color;
 
-                if (!uniqueColors.some(c => c.matches(color))) {
-                    uniqueColors.push(color);
-                }
+                // if (!uniqueColors.some(c => c.matches(color))) {
+                //     uniqueColors.push(color);
+                // }
             }
         }
 
@@ -137,12 +141,12 @@ class Pattern {
     }
 }
 
-class WaveSpot {
-    constructor() {
-        this.validPatterns = patterns.slice().fill(true);
-        this.collapsed = false;
-    }
-}
+// class WaveSpot {
+//     constructor() {
+//         this.validPatterns = patterns.slice().fill(true);
+//         this.collapsed = false;
+//     }
+// }
 
 // class GridSpot {
 //     constructor() {
@@ -208,14 +212,22 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
     patterns.length = 0;
     const input = e.target;
     const reader = new FileReader();
-    reader.onload = function(){
-        const dataURL = reader.result;
-        sourceImg.src = dataURL;
+    reader.onload = function(event){
+
+        const img = new Image();
+        img.src = event.target.result;
+
+        img.onload = function() {
+            img.height = this.height;
+            img.width = this.width;
+            sourceImg = img;
+
+            setTimeout(() => {
+                swapToCanvasAndStart()
+            }, 2000);
+        }
     };
     reader.readAsDataURL(input.files[0]);
-    setTimeout(() => {
-        swapToCanvasAndStart()
-    }, 2000);
 });
 //----------------------------------------------------------------------------//
 
@@ -224,8 +236,6 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
-
-    console.log(sourceImg);
 
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
@@ -237,27 +247,23 @@ function swapToCanvasAndStart() {
         }
     }
 
-    console.log(patterns);
-
     // precalculate valid overlaps
     patterns.forEach((pattern) => pattern.analyzePatterns());
 
-    console.log(patterns);
-
-
-    alert("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
-
     // create the grids that hold the states of patterns per pixel and their entropies
-    setWave();    
+    createW();    
 
     window.requestAnimationFrame(draw); // starts render loop
 }
-function setWave() {
-    wave.length = 0;
+function createW() {
+    W.length = 0;
+    H.length = 0;
     for (let x = 0; x < DIMS_X; x++) {
-        wave.push([]);
+        W.push([]);
+        H.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
-            wave[x].push(new WaveSpot());
+            W[x].push(patterns.map(_p => true));
+            H[x].push(patterns.length);
         }
     }
 }
@@ -322,24 +328,33 @@ function calcTileSize() {
 
 
 //----------------------------------------------------------------------------//
+function setH() {
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            H[x][y] = W[x][y].filter(valid => valid).length;
+        }
+    }
+}
+
 function findLowestEntropySpots() {
+    setH();
+
     let lowestE = patterns.length;
     let lowestEIds = [];
     let fullyCollapsed = true;
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            if (!wave[x][y].collapsed) {
+            if (H[x][y] > 1) {
                 fullyCollapsed = false;
 
-                if (wave[x][y].validStates.length == 0) {
-                    console.log("Knotted! Unable to progress, starting over...")
-                    setWave();
-                    break;
-                } else if (wave[x][y].validStates.length < lowestValidStates) {
-                    lowestE = wave[x][y].validStates.length;
+                // TODO: knotted!
+
+                if (H[x][y] < lowestE) {
+                    lowestE = H[x][y];
                     lowestEIds = [[x, y]];
-                } else if (wave[x][y].validStates.length == lowestValidStates) {
+                }
+                else if (H[x][y] == lowestE) {
                     lowestEIds.push([x, y]);
                 }
             }
@@ -353,63 +368,77 @@ function findLowestEntropySpots() {
     }
     return lowestEIds;
 }
+function collapse(idx) {
+    H[idx[0]][idx[1]] = 1;
+
+    let patternPicked = false;
+    while (!patternPicked) {
+        let patternIdx = Math.floor(Math.random() * patterns.length);
+        if (W[idx[0]][idx[1]][patternIdx]) {
+            W[idx[0]][idx[1]] = W[idx[0]][idx[1]].map(_valid => false);
+            W[idx[0]][idx[1]][patternIdx] = true;
+            patternPicked = true;
+        }
+    }
+
+}
 function propagate(collapsedIdx) {
-    const offsets = {
-        top: [0, -1],
-        right: [1, 0],
-        bottom: [0, 1],
-        left: [-1, 0],
-    }
+    // const offsets = {
+    //     top: [0, -1],
+    //     right: [1, 0],
+    //     bottom: [0, 1],
+    //     left: [-1, 0],
+    // }
 
-    let stack = [collapsedIdx];
+    // let stack = [collapsedIdx];
 
-    while (stack.length > 0) {
-        let currentIdx = stack.pop();
+    // while (stack.length > 0) {
+    //     let currentIdx = stack.pop();
 
-        for (let side in offsets) {
+    //     for (let side in offsets) {
         
-            let otherIdx = [
-                currentIdx[0] + offsets[side][0],
-                currentIdx[1] + offsets[side][1]
-            ]
+    //         let otherIdx = [
+    //             currentIdx[0] + offsets[side][0],
+    //             currentIdx[1] + offsets[side][1]
+    //         ]
         
-            if (WRAP) {
-                otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
-                otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
-            } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
-                continue;
-            }
+    //         if (WRAP) {
+    //             otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
+    //             otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
+    //         } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
+    //             continue;
+    //         }
 
-            let otherPossibleStates = wave[otherIdx[0]][otherIdx[1]].validStates;
-            let possibleNiegbors = wave[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
+    //         let otherPossibleStates = wave[otherIdx[0]][otherIdx[1]].validStates;
+    //         let possibleNiegbors = wave[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
 
-            if (otherPossibleStates.length == 0) {
-                continue;
-            }
+    //         if (otherPossibleStates.length == 0) {
+    //             continue;
+    //         }
 
-            for (let otherState of otherPossibleStates) {
-                if (!possibleNiegbors.includes(otherState)) {
-                    wave[otherIdx[0]][otherIdx[1]].validStates = wave[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
+    //         for (let otherState of otherPossibleStates) {
+    //             if (!possibleNiegbors.includes(otherState)) {
+    //                 wave[otherIdx[0]][otherIdx[1]].validStates = wave[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
 
-                    let i = false;
-                    for (let a = 0; a < stack.length; a++) {
-                        if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
-                            i = true;
-                        }
-                    }
-                    if (!i) {
-                        stack.push([otherIdx[0], otherIdx[1]]);
-                    }
-                }
-            }
-        }      
-    }
+    //                 let i = false;
+    //                 for (let a = 0; a < stack.length; a++) {
+    //                     if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
+    //                         i = true;
+    //                     }
+    //                 }
+    //                 if (!i) {
+    //                     stack.push([otherIdx[0], otherIdx[1]]);
+    //                 }
+    //             }
+    //         }
+    //     }      
+    // }
 }
 function iterate() {
     const lowestValidStatesIds = findLowestEntropySpots();
     if (LOOP || FORCE_NEXT) {
         const idxToCollapse = randomFromList(lowestValidStatesIds);
-        wave[idxToCollapse[0]][idxToCollapse[1]].collapse();
+        collapse(idxToCollapse);
 
         propagate(idxToCollapse);
 
@@ -442,7 +471,36 @@ function draw() {
     //------------------------------------------------------------------------//
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            wave[x][y].draw(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y)
+            if (H[x][y] == 1) {
+                let pattern;
+                for (let i = 0; i < W[x][y].length; i++) {
+                    if (W[x][y][i]) {
+                        pattern = patterns[i];
+                        break;
+                    }
+                }
+                context.fillStyle = pattern.colors[0][0].toRgb();
+                context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+            } else if (DRAW_STATES) {
+                // average colors
+                let r = 0;
+                let g = 0;
+                let b = 0;
+                let count = 0;
+                for (let i = 0; i < W[x][y].length; i++) {
+                    if (W[x][y][i]) {
+                        r += patterns[i].colors[0][0].r;
+                        g += patterns[i].colors[0][0].g;
+                        b += patterns[i].colors[0][0].b;
+                        count++;
+                    }
+                }
+                r /= count;
+                g /= count;
+                b /= count;
+                context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+            }
             if (DRAW_EDGES) {
                 context.lineWidth = 1;
                 context.strokeRect(
@@ -489,7 +547,7 @@ function keyDownHandle(e) {
             DRAW_EDGES = !DRAW_EDGES;
             break;
         case "r":
-            setWave();
+            createW();
             break;
     }
 }
