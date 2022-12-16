@@ -34,7 +34,7 @@ const TILE_OFFSET_Y = (canvas.height - (TILE_SIZE * DIMS_Y)) / 2;
 
 let tileImgOptions = [];
 let tiles = [];
-const grid = [];
+const wave = [];
 //----------------------------------------------------------------------------//
 
 
@@ -299,18 +299,18 @@ function swapToCanvasAndStart() {
     // set valid neighbors for tiles
     tiles.forEach((tile) => tile.analyzeTiles());
 
-    // create the grid of tiles that holds the states
-    setGrid();
+    // create the wave of tiles that holds the states
+    setWave();
     
 
     window.requestAnimationFrame(draw); // starts render loop
 }
-function setGrid() {
-    grid.length = 0;
+function setWave() {
+    wave.length = 0;
     for (let x = 0; x < DIMS_X; x++) {
-        grid.push([]);
+        wave.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
-            grid[x].push(new GridSpot());
+            wave[x].push(new GridSpot());
         }
     }
 }
@@ -473,16 +473,16 @@ function findLowestEntropySpots() {
     let fullyCollapsed = true;
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            if (!grid[x][y].collapsed) {
+            if (!wave[x][y].collapsed) {
                 fullyCollapsed = false;
-                if (grid[x][y].validStates.length == 0) {
+                if (wave[x][y].validStates.length == 0) {
                     console.log("Knotted! Unable to progress, starting over...")
-                    setGrid();
+                    setWave();
                     break;
-                } else if (grid[x][y].validStates.length < lowestValidStates) {
-                    lowestValidStates = grid[x][y].validStates.length;
+                } else if (wave[x][y].validStates.length < lowestValidStates) {
+                    lowestValidStates = wave[x][y].validStates.length;
                     lowestValidStatesIds = [[x, y]];
-                } else if (grid[x][y].validStates.length == lowestValidStates) {
+                } else if (wave[x][y].validStates.length == lowestValidStates) {
                     lowestValidStatesIds.push([x, y]);
                 }
             }
@@ -523,8 +523,8 @@ function propagate(collapsedIdx) {
                 continue;
             }
 
-            let otherPossibleStates = grid[otherIdx[0]][otherIdx[1]].validStates;
-            let possibleNiegbors = grid[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
+            let otherPossibleStates = wave[otherIdx[0]][otherIdx[1]].validStates;
+            let possibleNiegbors = wave[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
 
             if (otherPossibleStates.length == 0) {
                 continue;
@@ -532,7 +532,7 @@ function propagate(collapsedIdx) {
 
             for (let otherState of otherPossibleStates) {
                 if (!possibleNiegbors.includes(otherState)) {
-                    grid[otherIdx[0]][otherIdx[1]].validStates = grid[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
+                    wave[otherIdx[0]][otherIdx[1]].validStates = wave[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
 
                     let i = false;
                     for (let a = 0; a < stack.length; a++) {
@@ -552,7 +552,7 @@ function iterate() {
     const lowestValidStatesIds = findLowestEntropySpots();
     if (LOOP || FORCE_NEXT) {
         const idxToCollapse = randomFromList(lowestValidStatesIds);
-        grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
+        wave[idxToCollapse[0]][idxToCollapse[1]].collapse();
 
         propagate(idxToCollapse);
 
@@ -585,7 +585,7 @@ function draw() {
     //------------------------------------------------------------------------//
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            grid[x][y].draw(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y)
+            wave[x][y].draw(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y)
             if (DRAW_EDGES) {
                 context.lineWidth = 1;
                 context.strokeRect(
@@ -632,7 +632,7 @@ function keyDownHandle(e) {
             DRAW_EDGES = !DRAW_EDGES;
             break;
         case "r":
-            setGrid();
+            setWave();
             break;
     }
 }
