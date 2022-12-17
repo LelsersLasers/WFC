@@ -1,5 +1,5 @@
-const DIMS_X = 3;
-const DIMS_Y = 3;
+const DIMS_X = 5;
+const DIMS_Y = 5;
 
 // const WRAP = false;
 
@@ -140,70 +140,6 @@ class Pattern {
         }
     }
 }
-
-// class WaveSpot {
-//     constructor() {
-//         this.validPatterns = patterns.slice().fill(true);
-//         this.collapsed = false;
-//     }
-// }
-
-// class GridSpot {
-//     constructor() {
-//         this.validStates = tiles.slice();
-//         this.collapsed = false;
-//         this.collapsedState = null;
-//     }
-//     draw(x, y) {
-//         if (this.collapsed) {
-//             context.drawImage(this.collapsedState.img, x, y, TILE_SIZE, TILE_SIZE);
-//         } else if (DRAW_STATES) {
-//             const squares = Math.ceil(Math.sqrt(tiles.length));
-//             const squareSize = TILE_SIZE / squares;
-
-//             for (let i = 0; i < squares; i++) {
-//                 for (let j = 0; j < squares; j++) {
-//                     let idx = i * squares + j;
-//                     if (idx < tiles.length) {
-//                         const tile = tiles[idx];
-//                         if (this.validStates.includes(tile)) {
-//                             context.drawImage(tile.img, x + j * squareSize, y + i * squareSize, squareSize, squareSize);
-//                         }
-//                     }
-//                 }
-//             }
-//             /*
-//             context.globalAlpha = 1 / tiles.length;
-//             for (let state of this.validStates) {
-//                 context.drawImage(state.img, x, y, TILE_SIZE, TILE_SIZE);
-//             }
-//             context.globalAlpha = 1;
-//             */
-//         }
-//     }
-//     collapse() {
-//         this.collapsed = true;
-
-//         const ids = [...new Set(this.validStates.map(state => state.id))];
-//         const id = randomFromList(ids);
-//         this.validStates = this.validStates.filter(state => state.id === id);
-        
-//         this.collapsedState = randomFromList(this.validStates);
-//         this.validStates = [this.collapsedState];
-//     }
-//     getPossibleNeighbors(side) {
-//         const neighbors = [];
-//         for (let i = 0; i < this.validStates.length; i++) {
-//             for (let j = 0; j < this.validStates[i].validNeighbors[side].length; j++) {
-//                 let tile = this.validStates[i].validNeighbors[side][j];
-//                 if (!neighbors.includes(tile)) {
-//                     neighbors.push(tile);
-//                 }
-//             }
-//         }
-//         return neighbors;
-//     }
-// }
 //----------------------------------------------------------------------------//
 
 
@@ -433,6 +369,33 @@ function propagate(collapsedIdx) {
     //         }
     //     }      
     // }
+
+    const stack = [collapsedIdx];
+    while (stack.length > 0) {
+        let currentIdx = stack.pop();
+
+    }
+
+    // stack = {emin}
+    // while stack:
+    //     idC = stack.pop() 
+    //     for dir, t in enumerate(directions):
+    //         x = (idC%w + t[0])%w
+    //         y = (idC/w + t[1])%h
+    //         idN = x + y * w 
+    //         if idN in H: 
+    //             possible = {n for idP in W[idC] for n in A[idP][dir]}
+    //             if not W[idN].issubset(possible):
+    //                 intersection = possible & W[idN] 
+                
+    //                 if not intersection:
+    //                     print 'contradiction'
+    //                     noLoop()
+    //                     return
+                        
+    //                 W[idN] = intersection
+    //                 H[idN] = len(W[idN]) - random(.1)
+    //                 stack.add(idN)
 }
 function iterate() {
     const lowestValidStatesIds = findLowestEntropySpots();
