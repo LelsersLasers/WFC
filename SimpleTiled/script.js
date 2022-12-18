@@ -437,7 +437,7 @@ function getContextFromCanvas(canv, options = {}) {
     return ctx;
 }
 function setUpContext() {
-    console.log("Window is ".concat(window.innerWidth, " by ").concat(window.innerHeight));
+    console.log("Window is " + window.innerWidth +" by " + window.innerHeight);
 
     const maxW = window.innerWidth - 20;
     const maxH = window.innerHeight - 20;
