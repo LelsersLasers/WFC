@@ -57,13 +57,13 @@ class Color {
 }
 
 class Overlap {
-    constructor(pattern, offset_x, offset_y) {
+    constructor(pattern, offsetX, offsetY) {
         this.pattern = pattern;
-        this.offset_x = offset_x;
-        this.offset_y = offset_y;
+        this.offsetX = offsetX;
+        this.offsetY = offsetY;
     }
     matches(other) {
-        return this.pattern.matches(other.pattern) && this.offset_x === other.offset_x && this.offset_y === other.offset_y;
+        return this.pattern.matches(other.pattern) && this.offsetX === other.offsetX && this.offsetY === other.offsetY;
     }
 }
 
@@ -373,6 +373,46 @@ function propagate(collapsedIdx) {
     const stack = [collapsedIdx];
     while (stack.length > 0) {
         let currentIdx = stack.pop();
+
+        for (let offsetX = -N + 1; offsetX < N; offsetX++) {
+            for (let offsetY = -N + 1; offsetY < N; offsetY++) {
+                
+                let otherIdx = [
+                    (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
+                    (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
+                ];
+
+                let otherPossibleStates = W[otherIdx[0]][otherIdx[1]];
+
+                let currentPossibleOverlaps = [];
+                for (let i = 0; i < W[currentIdx[0]][currentIdx[1]].length; i++) {
+                    let pattern = patterns[i];
+                    if (W[currentIdx[0]][currentIdx[1]][i]) {
+                        for (let j = 0; j < pattern.overlaps.length; j++) {
+                            let overlap = pattern.overlaps[j];
+                            if (overlap.offsetX == offsetX && overlap.offsetY && !currentPossibleOverlaps.includes(overlap)) {
+                                currentPossibleOverlaps.push(overlap);
+                            }
+                        }
+                    }
+                }
+
+                for (let i = 0; i < otherPossibleStates.length; i++) {
+                    if (W[otherIdx[0]][otherIdx[1]][i]) {
+                        let pattern = patterns[i];
+
+                        if (!currentPossibleOverlaps.includes(pattern.overlap)) {
+                            W[otherIdx[0]][otherIdx[1]][i] = false;
+                        }
+
+                        
+
+                    }
+                }
+                
+            }
+        }
+
 
     }
 
