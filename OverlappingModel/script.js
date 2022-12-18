@@ -115,31 +115,46 @@ class Pattern {
         return true;
     }
     analyzePatterns() {
+        // for every pattern, put it in all possible positions and see if it can overlap
         for (let i = 0; i < patterns.length; i++) {
+            let pattern = patterns[i];
+
+            // put the other pattern in all possible positions
             for (let offsetX = -N + 1; offsetX < N; offsetX++) {
                 for (let offsetY = -N + 1; offsetY < N; offsetY++) {
+
+                    
                     if (offsetX === 0 && offsetY === 0) {
                         continue;
                     }
+
                     let validPattern = true;
+                    // compares pixels in this vs the shifted pattern
                     PER_SPOT: for (let patternX = 0; patternX < N; patternX++) {
                         for (let patternY = 0; patternY < N; patternY++) {
+
                             const otherPatternX = patternX + offsetX;
                             const otherPatternY = patternY + offsetY;
+
+                            // only check valid spots (overlap will only be complete of offsets = 0)
                             if (otherPatternX < 0 || otherPatternX >= N || otherPatternY < 0 || otherPatternY >= N) {
                                 continue;
                             }
-                            if (!this.colors[patternX][patternY].matches(patterns[i].colors[otherPatternX][otherPatternY])) {
+                            if (!this.colors[patternX][patternY].matches(pattern.colors[otherPatternX][otherPatternY])) {
                                 validPattern = false;
                                 break PER_SPOT;
                             }
+
                         }
                     }
+                    // no problems found with the overlap
                     if (validPattern) {
-                        this.overlaps.push(new Overlap(patterns[i], offsetX, offsetY));
+                        this.overlaps.push(new Overlap(pattern, offsetX, offsetY));
                     }
+
                 }
             }
+
         }
     }
 }
@@ -284,9 +299,6 @@ function findLowestEntropySpots() {
         for (let y = 0; y < DIMS_Y; y++) {
             if (H[x][y] > 1) {
                 fullyCollapsed = false;
-
-                // TODO: knotted!
-
                 if (H[x][y] < lowestE) {
                     lowestE = H[x][y];
                     lowestEIds = [[x, y]];
@@ -320,57 +332,6 @@ function collapse(idx) {
 
 }
 function propagate(collapsedIdx) {
-    // const offsets = {
-    //     top: [0, -1],
-    //     right: [1, 0],
-    //     bottom: [0, 1],
-    //     left: [-1, 0],
-    // }
-
-    // let stack = [collapsedIdx];
-
-    // while (stack.length > 0) {
-    //     let currentIdx = stack.pop();
-
-    //     for (let side in offsets) {
-        
-    //         let otherIdx = [
-    //             currentIdx[0] + offsets[side][0],
-    //             currentIdx[1] + offsets[side][1]
-    //         ]
-        
-    //         if (WRAP) {
-    //             otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
-    //             otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
-    //         } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
-    //             continue;
-    //         }
-
-    //         let otherPossibleStates = wave[otherIdx[0]][otherIdx[1]].validStates;
-    //         let possibleNiegbors = wave[currentIdx[0]][currentIdx[1]].getPossibleNeighbors(side);
-
-    //         if (otherPossibleStates.length == 0) {
-    //             continue;
-    //         }
-
-    //         for (let otherState of otherPossibleStates) {
-    //             if (!possibleNiegbors.includes(otherState)) {
-    //                 wave[otherIdx[0]][otherIdx[1]].validStates = wave[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
-
-    //                 let i = false;
-    //                 for (let a = 0; a < stack.length; a++) {
-    //                     if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
-    //                         i = true;
-    //                     }
-    //                 }
-    //                 if (!i) {
-    //                     stack.push([otherIdx[0], otherIdx[1]]);
-    //                 }
-    //             }
-    //         }
-    //     }      
-    // }
-
     const stack = [collapsedIdx];
 
     while (stack.length > 0) {
@@ -569,8 +530,8 @@ function draw() {
 
     setDelta();
 
-    const fps = (1000 / delta).toFixed(0);
-    console.log("FPS: " + fps);
+    // const fps = (1000 / delta).toFixed(0);
+    // console.log("FPS: " + fps);
 
     window.requestAnimationFrame(draw);
 }
@@ -606,6 +567,7 @@ function keyDownHandle(e) {
             break;
         case "r":
             createW();
+            iteration = 0;
             console.log("Reseting!")
             break;
     }
