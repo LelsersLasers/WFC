@@ -10,6 +10,7 @@ Takes 1 input image.
 - D: toggle drawing valid states of non-collapsed cells
 - O: toggle drawing outline boarder of valid tile spots
 - E: toggle drawing outline around grid tiles
+- H: toggle drawing entropy
 - R: reset grid -->
 
 ## Todo?

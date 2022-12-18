@@ -1,9 +1,9 @@
-const DIMS_X = 5;
-const DIMS_Y = 5;
+const DIMS_X = 8;
+const DIMS_Y = 8;
 
 // const WRAP = false;
 
-const SPEED = 3;
+const SPEED = 1;
 
 const N = 3;
 //----------------------------------------------------------------------------//
@@ -12,10 +12,13 @@ const N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_OUTLINE = true;
-let DRAW_EDGES = false;
+let DRAW_EDGES = true;
+let DRAW_H = true;
 
-let LOOP = false;
-let FORCE_NEXT = true;
+let LOOP = true;
+let FORCE_NEXT = false;
+
+let iteration = 0;
 //----------------------------------------------------------------------------//
 
 
@@ -23,7 +26,7 @@ let FORCE_NEXT = true;
 const canvas = document.getElementById("mainCanvas");
 const context = setUpContext();
 
-// const font = "monospace";
+const font = "monospace";
 
 let delta = 1/60;
 let lastTime = performance.now();
@@ -234,7 +237,7 @@ function getContextFromCanvas(canv, options = {}) {
     return ctx;
 }
 function setUpContext() {
-    console.log("Window is ".concat(window.innerWidth, " by ").concat(window.innerHeight));
+    console.log("Window is " + window.innerWidth +" by " + window.innerHeight);
 
     const maxW = window.innerWidth - 20;
     const maxH = window.innerHeight - 20;
@@ -273,8 +276,6 @@ function setH() {
 }
 
 function findLowestEntropySpots() {
-    setH();
-
     let lowestE = patterns.length;
     let lowestEIds = [];
     let fullyCollapsed = true;
@@ -371,79 +372,90 @@ function propagate(collapsedIdx) {
     // }
 
     const stack = [collapsedIdx];
+
     while (stack.length > 0) {
+
         let currentIdx = stack.pop();
 
         for (let offsetX = -N + 1; offsetX < N; offsetX++) {
             for (let offsetY = -N + 1; offsetY < N; offsetY++) {
+
+                // console.log({ iteration, stack, offsetX, offsetY });
+
+                if (offsetX == 0 && offsetY == 0) {
+                    continue;
+                }
                 
                 let otherIdx = [
                     (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
                     (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
                 ];
 
-                let otherPossibleStates = W[otherIdx[0]][otherIdx[1]];
+                let otherPossiblePatterns = W[otherIdx[0]][otherIdx[1]];
+                let currentPossiblePatterns = W[currentIdx[0]][currentIdx[1]];
 
+                // for every still possible pattern at the current spot, get the overlaps for the matching offset
                 let currentPossibleOverlaps = [];
-                for (let i = 0; i < W[currentIdx[0]][currentIdx[1]].length; i++) {
-                    let pattern = patterns[i];
-                    if (W[currentIdx[0]][currentIdx[1]][i]) {
-                        for (let j = 0; j < pattern.overlaps.length; j++) {
+                for (let i = 0; i < currentPossiblePatterns.length; i++) {
+                    if (currentPossiblePatterns[i]) { // if pattern is still possible
+                        let pattern = patterns[i];
+                        for (let j = 0; j < pattern.overlaps.length; j++) { // for every overlap
                             let overlap = pattern.overlaps[j];
-                            if (overlap.offsetX == offsetX && overlap.offsetY && !currentPossibleOverlaps.includes(overlap)) {
+                            // if overlap matches offset and is not already added
+                            // !some should be !includes but with match instead of ==
+                            if (overlap.offsetX == offsetX && overlap.offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
                                 currentPossibleOverlaps.push(overlap);
                             }
                         }
                     }
                 }
 
-                for (let i = 0; i < otherPossibleStates.length; i++) {
-                    if (W[otherIdx[0]][otherIdx[1]][i]) {
-                        let pattern = patterns[i];
+                // for every still possible pattern at the other spot, the pattern is in one of the possible overlaps
+                for (let i = 0; i < otherPossiblePatterns.length; i++) {
+                    if (otherPossiblePatterns[i]) { // if pattern is still possible
+                        let otherPattern = patterns[i];
 
-                        if (!currentPossibleOverlaps.includes(pattern.overlap)) {
-                            W[otherIdx[0]][otherIdx[1]][i] = false;
+                        // if there are no overlaps that match the pattern, remove it
+                        if (!currentPossibleOverlaps.some(o => o.pattern.matches(otherPattern))) {
+                            otherPossiblePatterns[i] = false;
+                            // H[otherIdx[0]][otherIdx[1]]--; // TODO
+
+                            // if this spot was affected, also affect its neighbors
+                            // but no need to add it to the stack if it is already there
+                            let inStack = false;
+                            for (let a = 0; a < stack.length; a++) {
+                                if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
+                                    inStack = true;
+                                }
+                            }
+                            if (!inStack) {
+                                stack.push([otherIdx[0], otherIdx[1]]);
+                            }
                         }
-
-                        
-
                     }
                 }
-                
             }
         }
-
-
     }
-
-    // stack = {emin}
-    // while stack:
-    //     idC = stack.pop() 
-    //     for dir, t in enumerate(directions):
-    //         x = (idC%w + t[0])%w
-    //         y = (idC/w + t[1])%h
-    //         idN = x + y * w 
-    //         if idN in H: 
-    //             possible = {n for idP in W[idC] for n in A[idP][dir]}
-    //             if not W[idN].issubset(possible):
-    //                 intersection = possible & W[idN] 
-                
-    //                 if not intersection:
-    //                     print 'contradiction'
-    //                     noLoop()
-    //                     return
-                        
-    //                 W[idN] = intersection
-    //                 H[idN] = len(W[idN]) - random(.1)
-    //                 stack.add(idN)
 }
 function iterate() {
+    setH();
     const lowestValidStatesIds = findLowestEntropySpots();
+
     if (LOOP || FORCE_NEXT) {
+
+        iteration++;
+
         const idxToCollapse = randomFromList(lowestValidStatesIds);
         collapse(idxToCollapse);
 
+        console.log("Starting Propagation (iteration " + iteration + ")");
+
         propagate(idxToCollapse);
+
+        setH();
+
+        console.log("Propagation Done (iteration " + iteration + ")");
 
         FORCE_NEXT = false;
     }
@@ -472,9 +484,13 @@ function draw() {
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
-    for (let x = 0; x < DIMS_X; x++) {
+    DRAW_LOOP: for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            if (H[x][y] == 1) {
+            if (H[x][y] == 0) {
+                console.log("Knotted! Unable to progress, starting over...")
+                createW();
+                break DRAW_LOOP;
+            } else if (H[x][y] == 1) {
                 let pattern;
                 for (let i = 0; i < W[x][y].length; i++) {
                     if (W[x][y][i]) {
@@ -484,6 +500,14 @@ function draw() {
                 }
                 context.fillStyle = pattern.colors[0][0].toRgb();
                 context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+                
+                context.strokeStyle = "blue";
+                context.lineWidth = 4;
+                context.strokeRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+
+                context.strokeStyle = "white";
+                context.lineWidth = 2;
+
             } else if (DRAW_STATES) {
                 // average colors
                 let r = 0;
@@ -513,12 +537,40 @@ function draw() {
                     TILE_SIZE
                 );
             }
+            if (DRAW_H) {
+                context.fillStyle = "red";
+                let fontSize = Math.floor(TILE_SIZE / 3);
+                context.font = fontSize + "px " + font;
+                for (let x = 0; x < DIMS_X; x++) {
+                    for (let y = 0; y < DIMS_Y; y++) {
+                        context.fillText(H[x][y], (x + 0.5) * TILE_SIZE + TILE_OFFSET_X, (y + 0.5) * TILE_SIZE + TILE_OFFSET_Y);
+                    }
+                }
+            }
         }
     }
     //------------------------------------------------------------------------//
 
+    // const maxX = DIMS_X * TILE_SIZE;
+    // const maxY = DIMS_Y * TILE_SIZE;
+    // context.drawImage(sourceImg, TILE_OFFSET_X, TILE_OFFSET_Y, maxX, maxY);
+    
+    // context.strokeStyle = "red";
 
-    // setDelta();
+    // let stepX = maxX / sourceImg.width;
+    // let stepY = maxY / sourceImg.height;
+
+    // for (let x = 0; x < sourceImg.width; x++) {
+    //     for (let y = 0; y < sourceImg.height; y++) {
+    //         context.strokeRect(x * stepX + TILE_OFFSET_X, y * stepY + TILE_OFFSET_Y, stepX, stepY);
+    //     }
+    // }
+
+
+    setDelta();
+
+    const fps = (1000 / delta).toFixed(0);
+    console.log("FPS: " + fps);
 
     window.requestAnimationFrame(draw);
 }
@@ -549,8 +601,12 @@ function keyDownHandle(e) {
         case "e":
             DRAW_EDGES = !DRAW_EDGES;
             break;
+        case "h":
+            DRAW_H = !DRAW_H;
+            break;
         case "r":
             createW();
+            console.log("Reseting!")
             break;
     }
 }
