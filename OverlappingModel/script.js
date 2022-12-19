@@ -1,5 +1,5 @@
-const DIMS_X = 8;
-const DIMS_Y = 8;
+const DIMS_X = 30;
+const DIMS_Y = 30;
 
 // const WRAP = false;
 
@@ -12,8 +12,8 @@ const N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_OUTLINE = true;
-let DRAW_EDGES = true;
-let DRAW_H = true;
+let DRAW_EDGES = false;
+let DRAW_H = false;
 
 let LOOP = true;
 let FORCE_NEXT = false;
@@ -95,10 +95,6 @@ class Pattern {
                 
                 const color = new Color(pixel[0], pixel[1], pixel[2]);
                 this.colors[x][y] = color;
-
-                // if (!uniqueColors.some(c => c.matches(color))) {
-                //     uniqueColors.push(color);
-                // }
             }
         }
 
@@ -122,7 +118,6 @@ class Pattern {
             // put the other pattern in all possible positions
             for (let offsetX = -N + 1; offsetX < N; offsetX++) {
                 for (let offsetY = -N + 1; offsetY < N; offsetY++) {
-
                     
                     if (offsetX === 0 && offsetY === 0) {
                         continue;
@@ -130,7 +125,7 @@ class Pattern {
 
                     let validPattern = true;
                     // compares pixels in this vs the shifted pattern
-                    PER_SPOT: for (let patternX = 0; patternX < N; patternX++) {
+                    for (let patternX = 0; patternX < N; patternX++) {
                         for (let patternY = 0; patternY < N; patternY++) {
 
                             const otherPatternX = patternX + offsetX;
@@ -142,7 +137,6 @@ class Pattern {
                             }
                             if (!this.colors[patternX][patternY].matches(pattern.colors[otherPatternX][otherPatternY])) {
                                 validPattern = false;
-                                break PER_SPOT;
                             }
 
                         }
@@ -151,10 +145,8 @@ class Pattern {
                     if (validPattern) {
                         this.overlaps.push(new Overlap(pattern, offsetX, offsetY));
                     }
-
                 }
             }
-
         }
     }
 }
@@ -341,7 +333,7 @@ function propagate(collapsedIdx) {
         for (let offsetX = -N + 1; offsetX < N; offsetX++) {
             for (let offsetY = -N + 1; offsetY < N; offsetY++) {
 
-                // console.log({ iteration, stack, offsetX, offsetY });
+                 console.log({ iteration, stack, offsetX, offsetY });
 
                 if (offsetX == 0 && offsetY == 0) {
                     continue;
@@ -360,14 +352,16 @@ function propagate(collapsedIdx) {
                 for (let i = 0; i < currentPossiblePatterns.length; i++) {
                     if (currentPossiblePatterns[i]) { // if pattern is still possible
                         let pattern = patterns[i];
+
                         for (let j = 0; j < pattern.overlaps.length; j++) { // for every overlap
                             let overlap = pattern.overlaps[j];
                             // if overlap matches offset and is not already added
-                            // !some should be !includes but with match instead of ==
-                            if (overlap.offsetX == offsetX && overlap.offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
+                            // !some is !includes but with 'match' instead of '=='
+                            if (overlap.offsetX == offsetX && overlap.offsetY == offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
                                 currentPossibleOverlaps.push(overlap);
                             }
                         }
+
                     }
                 }
 
@@ -376,8 +370,10 @@ function propagate(collapsedIdx) {
                     if (otherPossiblePatterns[i]) { // if pattern is still possible
                         let otherPattern = patterns[i];
 
+                        let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
+
                         // if there are no overlaps that match the pattern, remove it
-                        if (!currentPossibleOverlaps.some(o => o.pattern.matches(otherPattern))) {
+                        if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
                             otherPossiblePatterns[i] = false;
                             // H[otherIdx[0]][otherIdx[1]]--; // TODO
 
@@ -461,14 +457,6 @@ function draw() {
                 }
                 context.fillStyle = pattern.colors[0][0].toRgb();
                 context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
-                
-                context.strokeStyle = "blue";
-                context.lineWidth = 4;
-                context.strokeRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
-
-                context.strokeStyle = "white";
-                context.lineWidth = 2;
-
             } else if (DRAW_STATES) {
                 // average colors
                 let r = 0;
@@ -490,13 +478,13 @@ function draw() {
                 context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
             }
             if (DRAW_EDGES) {
+                if (H[x][y] == 1) {
+                    context.strokeStyle = "blue";
+                } else {
+                    context.strokeStyle = "white";
+                }
                 context.lineWidth = 1;
-                context.strokeRect(
-                    x * TILE_SIZE + TILE_OFFSET_X,
-                    y * TILE_SIZE + TILE_OFFSET_Y,
-                    TILE_SIZE,
-                    TILE_SIZE
-                );
+                context.strokeRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
             }
             if (DRAW_H) {
                 context.fillStyle = "red";
@@ -512,26 +500,11 @@ function draw() {
     }
     //------------------------------------------------------------------------//
 
-    // const maxX = DIMS_X * TILE_SIZE;
-    // const maxY = DIMS_Y * TILE_SIZE;
-    // context.drawImage(sourceImg, TILE_OFFSET_X, TILE_OFFSET_Y, maxX, maxY);
     
-    // context.strokeStyle = "red";
-
-    // let stepX = maxX / sourceImg.width;
-    // let stepY = maxY / sourceImg.height;
-
-    // for (let x = 0; x < sourceImg.width; x++) {
-    //     for (let y = 0; y < sourceImg.height; y++) {
-    //         context.strokeRect(x * stepX + TILE_OFFSET_X, y * stepY + TILE_OFFSET_Y, stepX, stepY);
-    //     }
-    // }
-
-
     setDelta();
 
-    // const fps = (1000 / delta).toFixed(0);
-    // console.log("FPS: " + fps);
+    const fps = (1000 / delta).toFixed(0);
+    console.log("FPS: " + fps);
 
     window.requestAnimationFrame(draw);
 }
