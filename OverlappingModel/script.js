@@ -95,9 +95,11 @@ class Pattern {
         let imgSpot = [0, 0];
         if (!WRAP_X) {
             imgSpot[0] = N - 1;
+            offsetX += N - 1;
         }
         if (!WRAP_Y) {
             imgSpot[1] = N - 1;
+            offsetY += N - 1;
         }
 
         ctx.globalAlpha = 0;
@@ -218,18 +220,15 @@ function swapToCanvasAndStart() {
     document.getElementById("fileInput").setAttribute("hidden", "");
 
     let start = [0, 0];
-    let end = [sourceImg.width, sourceImg.height];
     if (!WRAP_X) {
         start[0] = -N + 1;
-        end[0] = sourceImg.width + N - 1;
     }
     if (!WRAP_Y) {
         start[1] = -N + 1;
-        end[1] = sourceImg.height + N - 1;
     }
 
-    for (let x = start[0]; x < end[0]; x++) {
-        for (let y = start[1]; y < end[1]; y++) {
+    for (let x = start[0]; x < sourceImg.width; x++) {
+        for (let y = start[1]; y < sourceImg.height; y++) {
             // TODO: weighting patterns
             const pattern = new Pattern(x, y);
             if (!patterns.some(p => p.matches(pattern))) {
@@ -249,10 +248,11 @@ function swapToCanvasAndStart() {
 function createW() {
     W.length = 0;
     H.length = 0;
-    for (let x = 0; x < DIMS_X; x++) {
+
+    for (let x = 0; x < getDimsX(); x++) {
         W.push([]);
         H.push([]);
-        for (let y = 0; y < DIMS_Y; y++) {
+        for (let y = 0; y < getDimsY(); y++) {
             W[x].push(patterns.map(_p => true));
             H[x].push(patterns.length);
         }
@@ -260,6 +260,12 @@ function createW() {
 
     iteration = 0;
     DRAW_ONCE = true;
+}
+function getDimsX() {
+    return DIMS_X + (WRAP_X ? 0 : 2(N - 1));
+}
+function getDimsY() {
+    return DIMS_Y + (WRAP_Y ? 0 : 2(N - 1));
 }
 //----------------------------------------------------------------------------//
 
@@ -323,8 +329,9 @@ function calcTileSize() {
 
 //----------------------------------------------------------------------------//
 function setH() {
-    for (let x = 0; x < DIMS_X; x++) {
-        for (let y = 0; y < DIMS_Y; y++) {
+
+    for (let x = 0; x < getDimsX(); x++) {
+        for (let y = 0; y < getDimsY(); y++) {
             H[x][y] = W[x][y].filter(valid => valid).length;
         }
     }
@@ -334,6 +341,18 @@ function findLowestEntropySpots() {
     let lowestE = patterns.length;
     let lowestEIds = [];
     let fullyCollapsed = true;
+
+    let dimsX = getDimsX();
+    let dimsY = getDimsY();
+
+    let offset = [0, 0];
+    if (WRAP_X) {
+        offset[0] = N - 1;
+    }
+    if (WRAP_Y) {
+        offset[1] = N - 1;
+    }
+
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
