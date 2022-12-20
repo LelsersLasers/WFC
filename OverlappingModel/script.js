@@ -1,5 +1,5 @@
-const DIMS_X = 30;
-const DIMS_Y = 30;
+const DIMS_X = 20;
+const DIMS_Y = 20;
 
 // const WRAP = false;
 
@@ -18,6 +18,8 @@ let DRAW_H = false;
 let LOOP = true;
 let FORCE_NEXT = false;
 
+let DRAW_ONCE = true;
+
 let iteration = 0;
 //----------------------------------------------------------------------------//
 
@@ -32,8 +34,8 @@ let delta = 1/60;
 let lastTime = performance.now();
 
 const TILE_SIZE = Math.floor(calcTileSize());
-const TILE_OFFSET_X = (canvas.width - (TILE_SIZE * DIMS_X)) / 2;
-const TILE_OFFSET_Y = (canvas.height - (TILE_SIZE * DIMS_Y)) / 2;
+const TILE_OFFSET_X = Math.floor((canvas.width - (TILE_SIZE * DIMS_X)) / 2);
+const TILE_OFFSET_Y = Math.floor((canvas.height - (TILE_SIZE * DIMS_Y)) / 2);
 
 let sourceImg = new Image();
 
@@ -88,8 +90,8 @@ class Pattern {
 
         for (let x = 0; x < N; x++) {
             for (let y = 0; y < N; y++) {
-                const spotX = (x + offsetX) % sourceImg.width;
-                const spotY = (y + offsetY) % sourceImg.height;
+                const spotX = (x + offsetX + sourceImg.width) % sourceImg.width;
+                const spotY = (y + offsetY + sourceImg.height) % sourceImg.height;
                 
                 const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
                 
@@ -212,6 +214,9 @@ function createW() {
             H[x].push(patterns.length);
         }
     }
+
+    iteration = 0;
+    DRAW_ONCE = true;
 }
 //----------------------------------------------------------------------------//
 
@@ -333,8 +338,6 @@ function propagate(collapsedIdx) {
         for (let offsetX = -N + 1; offsetX < N; offsetX++) {
             for (let offsetY = -N + 1; offsetY < N; offsetY++) {
 
-                 console.log({ iteration, stack, offsetX, offsetY });
-
                 if (offsetX == 0 && offsetY == 0) {
                     continue;
                 }
@@ -406,13 +409,9 @@ function iterate() {
         const idxToCollapse = randomFromList(lowestValidStatesIds);
         collapse(idxToCollapse);
 
-        console.log("Starting Propagation (iteration " + iteration + ")");
-
         propagate(idxToCollapse);
 
         setH();
-
-        console.log("Propagation Done (iteration " + iteration + ")");
 
         FORCE_NEXT = false;
     }
@@ -435,8 +434,12 @@ function draw() {
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
-    for (let i = 0; i < SPEED; i++) {
-        iterate();
+    if (!DRAW_ONCE) {
+        for (let i = 0; i < SPEED; i++) {
+            iterate();
+        }
+    } else {
+        DRAW_ONCE = false;
     }
     //------------------------------------------------------------------------//
 
@@ -483,7 +486,7 @@ function draw() {
                 } else {
                     context.strokeStyle = "white";
                 }
-                context.lineWidth = 1;
+                context.lineWidth = 2;
                 context.strokeRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
             }
             if (DRAW_H) {
@@ -540,7 +543,6 @@ function keyDownHandle(e) {
             break;
         case "r":
             createW();
-            iteration = 0;
             console.log("Reseting!")
             break;
     }
