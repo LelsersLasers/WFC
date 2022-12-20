@@ -1,7 +1,8 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-// const WRAP = false;
+const WRAP_X = false;
+const WRAP_Y = false;
 
 const SPEED = 1;
 
@@ -49,10 +50,11 @@ const H = [];
 
 //----------------------------------------------------------------------------//
 class Color {
-    constructor(r, g, b) {
+    constructor(r, g, b, a) {
         this.r = r;
         this.g = g;
         this.b = b;
+        this.a = a;
     }
     matches(other) {
         return this.r === other.r && this.g === other.g && this.b === other.b && this.a === other.a;
@@ -77,11 +79,33 @@ class Pattern {
     constructor(offsetX, offsetY) {
 
         const canv = document.createElement("canvas");
+        
         canv.width = sourceImg.width;
+        if (!WRAP_X) {
+            canv.width += 2 * (N - 1);
+        }
+
         canv.height = sourceImg.height;
+        if (!WRAP_Y) {
+            canv.height += 2 * (N - 1);
+        }
+
         const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
 
-        ctx.drawImage(sourceImg, 0, 0, sourceImg.width, sourceImg.height);
+        let imgSpot = [0, 0];
+        if (!WRAP_X) {
+            imgSpot[0] = N - 1;
+        }
+        if (!WRAP_Y) {
+            imgSpot[1] = N - 1;
+        }
+
+        ctx.globalAlpha = 0;
+        ctx.fillStyle = "rgb(0, 0, 0)";
+        ctx.fillRect(0, 0, canv.width, canv.height);
+
+        ctx.globalAlpha = 1;
+        ctx.drawImage(sourceImg, imgSpot[0], imgSpot[1], sourceImg.width, sourceImg.height);
 
         this.colors = [];
 
@@ -91,12 +115,19 @@ class Pattern {
 
         for (let x = 0; x < N; x++) {
             for (let y = 0; y < N; y++) {
-                const spotX = (x + offsetX + sourceImg.width) % sourceImg.width;
-                const spotY = (y + offsetY + sourceImg.height) % sourceImg.height;
+                let spotX = x + offsetX;
+                let spotY = y + offsetY;
+
+                if (WRAP_X) {
+                    spotX = (spotX + sourceImg.width) % sourceImg.width;
+                }
+                if (WRAP_Y) {
+                    spotY = (spotY + sourceImg.height) % sourceImg.height;
+                }
                 
                 const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
                 
-                const color = new Color(pixel[0], pixel[1], pixel[2]);
+                const color = new Color(pixel[0], pixel[1], pixel[2], pixel[3]);
                 this.colors[x][y] = color;
             }
         }
@@ -186,8 +217,19 @@ function swapToCanvasAndStart() {
     document.getElementById("mainCanvas").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
 
-    for (let x = 0; x < sourceImg.width; x++) {
-        for (let y = 0; y < sourceImg.height; y++) {
+    let start = [0, 0];
+    let end = [sourceImg.width, sourceImg.height];
+    if (!WRAP_X) {
+        start[0] = -N + 1;
+        end[0] = sourceImg.width + N - 1;
+    }
+    if (!WRAP_Y) {
+        start[1] = -N + 1;
+        end[1] = sourceImg.height + N - 1;
+    }
+
+    for (let x = start[0]; x < end[0]; x++) {
+        for (let y = start[1]; y < end[1]; y++) {
             // TODO: weighting patterns
             const pattern = new Pattern(x, y);
             if (!patterns.some(p => p.matches(pattern))) {
