@@ -12,13 +12,14 @@ const N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_OUTLINE = true;
-let DRAW_EDGES = false;
-let DRAW_H = false;
+let DRAW_EDGES = true;
+let DRAW_H = true;
 
 let LOOP = true;
 let FORCE_NEXT = false;
 
 let DRAW_ONCE = true;
+let FORCE_NO_DRAW = false;
 
 let iteration = 0;
 //----------------------------------------------------------------------------//
@@ -333,6 +334,8 @@ function propagate(collapsedIdx) {
 
     while (stack.length > 0) {
 
+        console.log({ iteration, stack })
+
         let currentIdx = stack.pop();
 
         for (let offsetX = -N + 1; offsetX < N; offsetX++) {
@@ -391,6 +394,11 @@ function propagate(collapsedIdx) {
                             if (!inStack) {
                                 stack.push([otherIdx[0], otherIdx[1]]);
                             }
+
+                            // console.log("aaa");
+                            // FORCE_NO_DRAW = true;
+                            // DRAW_ONCE = true;
+                            // window.requestAnimationFrame(draw);
                         }
                     }
                 }
@@ -411,8 +419,6 @@ function iterate() {
 
         propagate(idxToCollapse);
 
-        setH();
-
         FORCE_NEXT = false;
     }
 }
@@ -421,6 +427,8 @@ function iterate() {
 
 //----------------------------------------------------------------------------//
 function draw() {
+
+    // console.log("DRAWING");
 
     //------------------------------------------------------------------------//
     context.fillStyle = "black";
@@ -444,6 +452,8 @@ function draw() {
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
+    // setH();
+
     DRAW_LOOP: for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             if (H[x][y] == 0) {
@@ -509,7 +519,11 @@ function draw() {
     const fps = (1000 / delta).toFixed(0);
     console.log("FPS: " + fps);
 
-    window.requestAnimationFrame(draw);
+    if (!FORCE_NO_DRAW) {
+        window.requestAnimationFrame(draw);
+    } else {
+        FORCE_NO_DRAW = false;
+    }
 }
 //----------------------------------------------------------------------------//
 
