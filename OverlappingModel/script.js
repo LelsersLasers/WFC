@@ -202,7 +202,8 @@ function swapToCanvasAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createW();    
 
-    window.requestAnimationFrame(draw); // starts render loop
+    // window.requestAnimationFrame(draw); // starts render loop
+    setInterval(draw, 1000 / 100);
 }
 function createW() {
     W.length = 0;
@@ -317,7 +318,6 @@ function findLowestEntropySpots() {
 }
 function collapse(idx) {
     H[idx[0]][idx[1]] = 1;
-
     let patternPicked = false;
     while (!patternPicked) {
         let patternIdx = Math.floor(Math.random() * patterns.length);
@@ -327,38 +327,28 @@ function collapse(idx) {
             patternPicked = true;
         }
     }
-
 }
 function propagate(collapsedIdx) {
     const stack = [collapsedIdx];
-
     while (stack.length > 0) {
-
-        console.log({ iteration, stack })
-
+        // console.log({ iteration, stack })
         let currentIdx = stack.pop();
-
         for (let offsetX = -N + 1; offsetX < N; offsetX++) {
             for (let offsetY = -N + 1; offsetY < N; offsetY++) {
-
                 if (offsetX == 0 && offsetY == 0) {
                     continue;
                 }
-                
                 let otherIdx = [
                     (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
                     (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
                 ];
-
                 let otherPossiblePatterns = W[otherIdx[0]][otherIdx[1]];
                 let currentPossiblePatterns = W[currentIdx[0]][currentIdx[1]];
-
                 // for every still possible pattern at the current spot, get the overlaps for the matching offset
                 let currentPossibleOverlaps = [];
                 for (let i = 0; i < currentPossiblePatterns.length; i++) {
                     if (currentPossiblePatterns[i]) { // if pattern is still possible
                         let pattern = patterns[i];
-
                         for (let j = 0; j < pattern.overlaps.length; j++) { // for every overlap
                             let overlap = pattern.overlaps[j];
                             // if overlap matches offset and is not already added
@@ -367,22 +357,16 @@ function propagate(collapsedIdx) {
                                 currentPossibleOverlaps.push(overlap);
                             }
                         }
-
                     }
                 }
-
                 // for every still possible pattern at the other spot, the pattern is in one of the possible overlaps
                 for (let i = 0; i < otherPossiblePatterns.length; i++) {
                     if (otherPossiblePatterns[i]) { // if pattern is still possible
                         let otherPattern = patterns[i];
-
                         let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
-
                         // if there are no overlaps that match the pattern, remove it
                         if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
                             otherPossiblePatterns[i] = false;
-                            // H[otherIdx[0]][otherIdx[1]]--; // TODO
-
                             // if this spot was affected, also affect its neighbors
                             // but no need to add it to the stack if it is already there
                             let inStack = false;
@@ -394,8 +378,7 @@ function propagate(collapsedIdx) {
                             if (!inStack) {
                                 stack.push([otherIdx[0], otherIdx[1]]);
                             }
-
-                            // console.log("aaa");
+                            console.log("aaa");
                             // FORCE_NO_DRAW = true;
                             // DRAW_ONCE = true;
                             // window.requestAnimationFrame(draw);
@@ -452,7 +435,7 @@ function draw() {
     //------------------------------------------------------------------------//
 
     //------------------------------------------------------------------------//
-    // setH();
+    setH();
 
     DRAW_LOOP: for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
@@ -503,11 +486,7 @@ function draw() {
                 context.fillStyle = "red";
                 let fontSize = Math.floor(TILE_SIZE / 3);
                 context.font = fontSize + "px " + font;
-                for (let x = 0; x < DIMS_X; x++) {
-                    for (let y = 0; y < DIMS_Y; y++) {
-                        context.fillText(H[x][y], (x + 0.5) * TILE_SIZE + TILE_OFFSET_X, (y + 0.5) * TILE_SIZE + TILE_OFFSET_Y);
-                    }
-                }
+                context.fillText(H[x][y], (x + 0.5) * TILE_SIZE + TILE_OFFSET_X, (y + 0.5) * TILE_SIZE + TILE_OFFSET_Y);
             }
         }
     }
@@ -520,7 +499,7 @@ function draw() {
     console.log("FPS: " + fps);
 
     if (!FORCE_NO_DRAW) {
-        window.requestAnimationFrame(draw);
+        // window.requestAnimationFrame(draw);
     } else {
         FORCE_NO_DRAW = false;
     }
@@ -529,7 +508,6 @@ function draw() {
 
 
 //----------------------------------------------------------------------------//
-
 document.addEventListener("keydown", keyDownHandle, false);
 
 function keyDownHandle(e) {
