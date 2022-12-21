@@ -26,8 +26,7 @@ let iteration = 0;
 
 
 //----------------------------------------------------------------------------//
-const canvas = document.getElementById("mainCanvas");
-const context = setUpContext();
+const svg = document.getElementById("mainSvg");
 
 const font = "monospace";
 
@@ -35,8 +34,8 @@ let delta = 1/60;
 let lastTime = performance.now();
 
 const TILE_SIZE = Math.floor(calcTileSize());
-const TILE_OFFSET_X = Math.floor((canvas.width - (TILE_SIZE * DIMS_X)) / 2);
-const TILE_OFFSET_Y = Math.floor((canvas.height - (TILE_SIZE * DIMS_Y)) / 2);
+const TILE_OFFSET_X = Math.floor((svg.width - (TILE_SIZE * DIMS_X)) / 2);
+const TILE_OFFSET_Y = Math.floor((svg.height - (TILE_SIZE * DIMS_Y)) / 2);
 
 let sourceImg = new Image();
 
@@ -172,7 +171,7 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
             sourceImg = img;
 
             setTimeout(() => {
-                swapToCanvasAndStart()
+                swapToSvgAndStart()
             }, 2000);
         }
     };
@@ -182,8 +181,21 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 
 
 //----------------------------------------------------------------------------//
-function swapToCanvasAndStart() {
-    document.getElementById("mainCanvas").removeAttribute("hidden");
+function setupSvg() {
+    const svg = document.getElementById("mainSvg");
+
+    console.log("Window is " + window.innerWidth +" by " + window.innerHeight);
+
+    const maxW = window.innerWidth - 20;
+    const maxH = window.innerHeight - 20;
+
+    svg.width = maxW;
+    svg.height = maxH;
+    
+    return svg;
+}
+function swapToSvgAndStart() {
+    document.getElementById("mainSvg").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
 
     for (let x = 0; x < sourceImg.width; x++) {
@@ -203,20 +215,28 @@ function swapToCanvasAndStart() {
     createW();    
 
     // window.requestAnimationFrame(draw); // starts render loop
-    setInterval(draw, 1000 / 100);
+    // setInterval(draw, 1000 / 100);
 }
 function createW() {
     W.length = 0;
     H.length = 0;
+    svg.innerHTML = '';
+
     for (let x = 0; x < DIMS_X; x++) {
         W.push([]);
         H.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
             W[x].push(patterns.map(_p => true));
             H[x].push(patterns.length);
+
+            const rect = document.createElement("rect");
+            rect.x = TILE_OFFSET_X + x * TILE_SIZE;
+            rect.y = TILE_OFFSET_Y + y * TILE_SIZE;
+            rect.width = TILE_SIZE;
+            rect.height = TILE_SIZE;
+            rect.style.fill = "black";
         }
     }
-
     iteration = 0;
     DRAW_ONCE = true;
 }
@@ -224,9 +244,9 @@ function createW() {
 
 
 //----------------------------------------------------------------------------//
-function reset() {
-    location.reload(); // reloads the webpage
-}
+// function reset() {
+//     location.reload(); // reloads the webpage
+// }
 function randomFromList(lst) {
     return lst[Math.floor(Math.random() * lst.length)];
 }
@@ -250,29 +270,10 @@ function getContextFromCanvas(canv, options = {}) {
 
     return ctx;
 }
-function setUpContext() {
-    console.log("Window is " + window.innerWidth +" by " + window.innerHeight);
-
-    const maxW = window.innerWidth - 20;
-    const maxH = window.innerHeight - 20;
-
-    // canvas.width = Math.min(maxW, maxH * 9/7);
-    // canvas.height = Math.min(maxH, maxW * 7/9);
-    canvas.width = maxW;
-    canvas.height = maxH;
-
-    const context = getContextFromCanvas(canvas);
-
-    context.textAlign = "center";
-    context.textBaseline = "middle";
-    context.lineWidth = 3;
-
-    return context;
-}
 function calcTileSize() {
     // Calculate the tile size
-    const tileW = canvas.width / DIMS_X;
-    const tileH = canvas.height / DIMS_Y;
+    const tileW = svg.width / DIMS_X;
+    const tileH = svg.height / DIMS_Y;
     const tileSize = Math.min(tileW, tileH);
 
     return tileSize;
@@ -409,101 +410,102 @@ function iterate() {
 
 
 //----------------------------------------------------------------------------//
-function draw() {
+// function draw() {
 
-    // console.log("DRAWING");
+//     // console.log("DRAWING");
 
-    //------------------------------------------------------------------------//
-    context.fillStyle = "black";
-    context.fillRect(0, 0, canvas.width, canvas.height);
+//     //------------------------------------------------------------------------//
+//     context.fillStyle = "black";
+//     context.fillRect(0, 0, canvas.width, canvas.height);
 
-    if (DRAW_OUTLINE) {
-        context.strokeStyle = "white";
-        context.lineWidth = 2;
-        context.strokeRect(TILE_OFFSET_X, TILE_OFFSET_Y, DIMS_X * TILE_SIZE, DIMS_Y * TILE_SIZE);
-    }
-    //------------------------------------------------------------------------//
+//     if (DRAW_OUTLINE) {
+//         context.strokeStyle = "white";
+//         context.lineWidth = 2;
+//         context.strokeRect(TILE_OFFSET_X, TILE_OFFSET_Y, DIMS_X * TILE_SIZE, DIMS_Y * TILE_SIZE);
+//     }
+//     //------------------------------------------------------------------------//
 
-    //------------------------------------------------------------------------//
-    if (!DRAW_ONCE) {
-        for (let i = 0; i < SPEED; i++) {
-            iterate();
-        }
-    } else {
-        DRAW_ONCE = false;
-    }
-    //------------------------------------------------------------------------//
+//     //------------------------------------------------------------------------//
+//     if (!DRAW_ONCE) {
+//         for (let i = 0; i < SPEED; i++) {
+//             iterate();
+//         }
+//     } else {
+//         DRAW_ONCE = false;
+//     }
+//     //------------------------------------------------------------------------//
 
-    //------------------------------------------------------------------------//
-    setH();
+//     //------------------------------------------------------------------------//
+//     setH();
 
-    DRAW_LOOP: for (let x = 0; x < DIMS_X; x++) {
-        for (let y = 0; y < DIMS_Y; y++) {
-            if (H[x][y] == 0) {
-                console.log("Knotted! Unable to progress, starting over...")
-                createW();
-                break DRAW_LOOP;
-            } else if (H[x][y] == 1) {
-                let pattern;
-                for (let i = 0; i < W[x][y].length; i++) {
-                    if (W[x][y][i]) {
-                        pattern = patterns[i];
-                        break;
-                    }
-                }
-                context.fillStyle = pattern.colors[0][0].toRgb();
-                context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
-            } else if (DRAW_STATES) {
-                // average colors
-                let r = 0;
-                let g = 0;
-                let b = 0;
-                let count = 0;
-                for (let i = 0; i < W[x][y].length; i++) {
-                    if (W[x][y][i]) {
-                        r += patterns[i].colors[0][0].r;
-                        g += patterns[i].colors[0][0].g;
-                        b += patterns[i].colors[0][0].b;
-                        count++;
-                    }
-                }
-                r /= count;
-                g /= count;
-                b /= count;
-                context.fillStyle = `rgb(${r}, ${g}, ${b})`;
-                context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
-            }
-            if (DRAW_EDGES) {
-                if (H[x][y] == 1) {
-                    context.strokeStyle = "blue";
-                } else {
-                    context.strokeStyle = "white";
-                }
-                context.lineWidth = 2;
-                context.strokeRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
-            }
-            if (DRAW_H) {
-                context.fillStyle = "red";
-                let fontSize = Math.floor(TILE_SIZE / 3);
-                context.font = fontSize + "px " + font;
-                context.fillText(H[x][y], (x + 0.5) * TILE_SIZE + TILE_OFFSET_X, (y + 0.5) * TILE_SIZE + TILE_OFFSET_Y);
-            }
-        }
-    }
-    //------------------------------------------------------------------------//
+//     DRAW_LOOP: for (let x = 0; x < DIMS_X; x++) {
+//         for (let y = 0; y < DIMS_Y; y++) {
+//             if (H[x][y] == 0) {
+//                 console.log("Knotted! Unable to progress, starting over...")
+//                 createW();
+//                 break DRAW_LOOP;
+//             } else if (H[x][y] == 1) {
+//                 let pattern;
+//                 for (let i = 0; i < W[x][y].length; i++) {
+//                     if (W[x][y][i]) {
+//                         pattern = patterns[i];
+//                         break;
+//                     }
+//                 }
+//                 context.fillStyle = pattern.colors[0][0].toRgb();
+//                 context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+//             } else if (DRAW_STATES) {
+//                 // average colors
+//                 let r = 0;
+//                 let g = 0;
+//                 let b = 0;
+//                 let count = 0;
+//                 for (let i = 0; i < W[x][y].length; i++) {
+//                     if (W[x][y][i]) {
+//                         r += patterns[i].colors[0][0].r;
+//                         g += patterns[i].colors[0][0].g;
+//                         b += patterns[i].colors[0][0].b;
+//                         count++;
+//                     }
+//                 }
+//                 r /= count;
+//                 g /= count;
+//                 b /= count;
+//                 context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+//                 context.fillRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+//             }
+//             if (DRAW_EDGES) {
+//                 if (H[x][y] == 1) {
+//                     context.strokeStyle = "blue";
+//                 } else {
+//                     context.strokeStyle = "white";
+//                 }
+//                 context.lineWidth = 2;
+//                 context.strokeRect(x * TILE_SIZE + TILE_OFFSET_X, y * TILE_SIZE + TILE_OFFSET_Y, TILE_SIZE, TILE_SIZE);
+//             }
+//             if (DRAW_H) {
+//                 context.fillStyle = "red";
+//                 let fontSize = Math.floor(TILE_SIZE / 3);
+//                 context.font = fontSize + "px " + font;
+//                 context.fillText(H[x][y], (x + 0.5) * TILE_SIZE + TILE_OFFSET_X, (y + 0.5) * TILE_SIZE + TILE_OFFSET_Y);
+//             }
+//         }
+//     }
+//     //------------------------------------------------------------------------//
 
     
-    setDelta();
+//     setDelta();
 
-    const fps = (1000 / delta).toFixed(0);
-    console.log("FPS: " + fps);
+//     const fps = (1000 / delta).toFixed(0);
+//     console.log("FPS: " + fps);
 
-    if (!FORCE_NO_DRAW) {
-        // window.requestAnimationFrame(draw);
-    } else {
-        FORCE_NO_DRAW = false;
-    }
-}
+//     if (!FORCE_NO_DRAW) {
+//         // window.requestAnimationFrame(draw);
+//     } else {
+//         FORCE_NO_DRAW = false;
+//     }
+// }
+
 //----------------------------------------------------------------------------//
 
 
