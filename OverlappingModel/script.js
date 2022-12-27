@@ -26,7 +26,10 @@ let iteration = 0;
 
 
 //----------------------------------------------------------------------------//
+const svgns = "http://www.w3.org/2000/svg";
+
 const svg = document.getElementById("mainSvg");
+setupSvg();
 
 const font = "monospace";
 
@@ -34,15 +37,17 @@ let delta = 1/60;
 let lastTime = performance.now();
 
 const TILE_SIZE = Math.floor(calcTileSize());
-const TILE_OFFSET_X = Math.floor((svg.width - (TILE_SIZE * DIMS_X)) / 2);
-const TILE_OFFSET_Y = Math.floor((svg.height - (TILE_SIZE * DIMS_Y)) / 2);
+const TILE_OFFSET_X = Math.floor((svg.getAttribute("width") - (TILE_SIZE * DIMS_X)) / 2);
+const TILE_OFFSET_Y = Math.floor((svg.getAttribute("height") - (TILE_SIZE * DIMS_Y)) / 2);
 
 let sourceImg = new Image();
 
 let patterns = [];
 
-const W = []
+const W = [];
 const H = [];
+
+const rects = [];
 //----------------------------------------------------------------------------//
 
 
@@ -158,6 +163,7 @@ class Pattern {
 //----------------------------------------------------------------------------//
 document.getElementById("fileInput").addEventListener("change", (e) => {
     patterns.length = 0;
+    
     const input = e.target;
     const reader = new FileReader();
     reader.onload = function(event){
@@ -189,8 +195,10 @@ function setupSvg() {
     const maxW = window.innerWidth - 20;
     const maxH = window.innerHeight - 20;
 
-    svg.width = maxW;
-    svg.height = maxH;
+    svg.setAttribute("width", maxW);
+    svg.setAttribute("height", maxH);
+
+    svg.setAttribute("viewBox", "0 0 " + maxW + " " + maxH);
     
     return svg;
 }
@@ -214,27 +222,39 @@ function swapToSvgAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createW();    
 
+    updateSvg();
+    
     // window.requestAnimationFrame(draw); // starts render loop
     // setInterval(draw, 1000 / 100);
 }
 function createW() {
     W.length = 0;
     H.length = 0;
+    rects.length = 0;
     svg.innerHTML = '';
 
     for (let x = 0; x < DIMS_X; x++) {
         W.push([]);
         H.push([]);
+        rects.push([]);
+
         for (let y = 0; y < DIMS_Y; y++) {
+
             W[x].push(patterns.map(_p => true));
             H[x].push(patterns.length);
 
-            const rect = document.createElement("rect");
-            rect.x = TILE_OFFSET_X + x * TILE_SIZE;
-            rect.y = TILE_OFFSET_Y + y * TILE_SIZE;
-            rect.width = TILE_SIZE;
-            rect.height = TILE_SIZE;
+            const rect = document.createElementNS(svgns, "rect");
+            rect.setAttribute("x", TILE_OFFSET_X + x * TILE_SIZE);
+            rect.setAttribute("y", TILE_OFFSET_Y + y * TILE_SIZE);
+            rect.setAttribute("width", TILE_SIZE);
+            rect.setAttribute("height", TILE_SIZE);
+
+            rect.id = toId(x, y);
+
             rect.style.fill = "black";
+
+            svg.appendChild(rect);
+            rects[x].push(rect);
         }
     }
     iteration = 0;
@@ -257,6 +277,15 @@ function setDelta() {
 //----------------------------------------------------------------------------//
 
 
+function toId(x, y) {
+    return x + "_" + y;
+}
+function fromId(id) {
+    const split = id.split("_");
+    return {x: parseInt(split[0]), y: parseInt(split[1])};
+}
+
+
 //----------------------------------------------------------------------------//
 function getContextFromCanvas(canv, options = {}) {
     const ctx = canv.getContext("2d", options);
@@ -272,8 +301,8 @@ function getContextFromCanvas(canv, options = {}) {
 }
 function calcTileSize() {
     // Calculate the tile size
-    const tileW = svg.width / DIMS_X;
-    const tileH = svg.height / DIMS_Y;
+    const tileW = svg.getAttribute("width") / DIMS_X;
+    const tileH = svg.getAttribute("height") / DIMS_Y;
     const tileSize = Math.min(tileW, tileH);
 
     return tileSize;
@@ -505,6 +534,47 @@ function iterate() {
 //         FORCE_NO_DRAW = false;
 //     }
 // }
+
+function updateSvg() {
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            if (H[x][y] == 0) {
+                console.log("Knotted! Unable to progress, starting over...")
+                createW();
+                break;
+            } else if (H[x][y] == 1) {
+                let pattern;
+                for (let i = 0; i < W[x][y].length; i++) {
+                    if (W[x][y][i]) {
+                        pattern = patterns[i];
+                        break;
+                    }
+                }
+                rects[x][y].style.fill = pattern.colors[0][0].toRgb();
+                rects[x][y].style.stroke = pattern.colors[0][0].toRgb();
+            } else if (DRAW_STATES) {
+                // average colors
+                let r = 0;
+                let g = 0;
+                let b = 0;
+                let count = 0;
+                for (let i = 0; i < W[x][y].length; i++) {
+                    if (W[x][y][i]) {
+                        r += patterns[i].colors[0][0].r;
+                        g += patterns[i].colors[0][0].g;
+                        b += patterns[i].colors[0][0].b;
+                        count++;
+                    }
+                }
+                r /= count;
+                g /= count;
+                b /= count;
+                rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
+                rects[x][y].style.stroke = `rgb(${r}, ${g}, ${b})`;
+            }
+        }
+    }
+}
 
 //----------------------------------------------------------------------------//
 
