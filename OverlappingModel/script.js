@@ -217,9 +217,7 @@ function swapToSvgAndStart() {
     patterns.forEach((pattern) => pattern.analyzePatterns());
 
     // create the grids that hold the states of patterns per pixel and their entropies
-    createW();    
-
-    updateSvg();
+    createW();
     
     setInterval(mainLoop, 1);
 }
@@ -253,6 +251,8 @@ function createW() {
             rects[x].push(rect);
         }
     }
+    updateSvg();
+
     iteration = 0;
 }
 //----------------------------------------------------------------------------//
@@ -358,7 +358,9 @@ function collapse(idx) {
 function propagate(collapsedIdx) {
     const stack = [collapsedIdx];
     while (stack.length > 0) {
-        // console.log({ iteration, stack })
+
+        console.log({ iteration, stack })
+
         let currentIdx = stack.pop();
         for (let offsetX = -N + 1; offsetX < N; offsetX++) {
             for (let offsetY = -N + 1; offsetY < N; offsetY++) {
@@ -411,51 +413,58 @@ function propagate(collapsedIdx) {
                             // updateSvg();
                             H[otherIdx[0]][otherIdx[1]] = otherPossiblePatterns.filter(valid => valid).length;
 
-                            setTimeout(() => {
-                                console.log("bbb");
-                                setColorAt(otherIdx[0], otherIdx[1]);
-                                console.log("ccc");
-                            }, 100);
 
                             // MARK TODO: ELEMENTS NOT "live" UPDATING
                             //------------------------------------------------//
-                            // let x = otherIdx[0];
-                            // let y = otherIdx[1];
 
-                            // if (H[x][y] == 0) {
-                            //     console.log("Knotted! Unable to progress, starting over...");
-                            // } else if (H[x][y] == 1) {
-                            //     let pattern;
-                            //     for (let i = 0; i < W[x][y].length; i++) {
-                            //         if (W[x][y][i]) {
-                            //             pattern = patterns[i];
-                            //             break;
-                            //         }
-                            //     }
-                            //     rects[x][y].style.fill = pattern.colors[0][0].toRgb();
-                            //     rects[x][y].style.stroke = pattern.colors[0][0].toRgb();
-                            // } else if (DRAW_STATES) {
-                            //     // average colors
-                            //     let r = 0;
-                            //     let g = 0;
-                            //     let b = 0;
-                            //     let count = 0;
-                            //     for (let i = 0; i < W[x][y].length; i++) {
-                            //         if (W[x][y][i]) {
-                            //             r += patterns[i].colors[0][0].r;
-                            //             g += patterns[i].colors[0][0].g;
-                            //             b += patterns[i].colors[0][0].b;
-                            //             count++;
-                            //         }
-                            //     }
-                            //     r /= count;
-                            //     g /= count;
-                            //     b /= count;
-                            //     const style = `rgb(${r}, ${g}, ${b})`;
-                            //     console.log({ iteration, stack, style });
-                            //     rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
-                            //     rects[x][y].style.stroke = `rgb(${r}, ${g}, ${b})`;
-                            // }
+                            // setTimeout(() => {
+                            //     console.log("bbb");
+                            //     setColorAt(otherIdx[0], otherIdx[1]);
+                            //     console.log("ccc");
+                            // }, 100);
+
+                            let x = otherIdx[0];
+                            let y = otherIdx[1];
+
+                            if (H[x][y] == 0) {
+                                console.log("Knotted! Unable to progress, starting over...");
+                            } else if (H[x][y] == 1) {
+                                let pattern;
+                                for (let i = 0; i < W[x][y].length; i++) {
+                                    if (W[x][y][i]) {
+                                        pattern = patterns[i];
+                                        break;
+                                    }
+                                }
+                                setTimeout(() => {
+                                    rects[x][y].style.fill = pattern.colors[0][0].toRgb();
+                                    rects[x][y].style.stroke = pattern.colors[0][0].toRgb();
+                                }, 100);
+                            } else if (DRAW_STATES) {
+                                // average colors
+                                let r = 0;
+                                let g = 0;
+                                let b = 0;
+                                let count = 0;
+                                for (let i = 0; i < W[x][y].length; i++) {
+                                    if (W[x][y][i]) {
+                                        r += patterns[i].colors[0][0].r;
+                                        g += patterns[i].colors[0][0].g;
+                                        b += patterns[i].colors[0][0].b;
+                                        count++;
+                                    }
+                                }
+                                r /= count;
+                                g /= count;
+                                b /= count;
+
+                                // const style = `rgb(${r}, ${g}, ${b})`;
+                                // console.log({ iteration, stack, style });
+                                setTimeout(() => {
+                                    rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
+                                    rects[x][y].style.stroke = `rgb(${r}, ${g}, ${b})`;
+                                }, 100);
+                            }
                             //------------------------------------------------//
                         }
                     }
