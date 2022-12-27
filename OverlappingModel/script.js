@@ -18,9 +18,6 @@ let DRAW_H = true;
 let LOOP = true;
 let FORCE_NEXT = false;
 
-let DRAW_ONCE = true;
-let FORCE_NO_DRAW = false;
-
 let iteration = 0;
 //----------------------------------------------------------------------------//
 
@@ -224,8 +221,7 @@ function swapToSvgAndStart() {
 
     updateSvg();
     
-    // window.requestAnimationFrame(draw); // starts render loop
-    // setInterval(draw, 1000 / 100);
+    setInterval(mainLoop, 1);
 }
 function createW() {
     W.length = 0;
@@ -258,7 +254,6 @@ function createW() {
         }
     }
     iteration = 0;
-    DRAW_ONCE = true;
 }
 //----------------------------------------------------------------------------//
 
@@ -343,6 +338,8 @@ function findLowestEntropySpots() {
         LOOP = false;
         FORCE_NEXT = false;
         console.log("Fully collapsed!");
+        
+        updateSvg();
     }
     return lowestEIds;
 }
@@ -408,10 +405,53 @@ function propagate(collapsedIdx) {
                             if (!inStack) {
                                 stack.push([otherIdx[0], otherIdx[1]]);
                             }
+
                             console.log("aaa");
-                            // FORCE_NO_DRAW = true;
-                            // DRAW_ONCE = true;
-                            // window.requestAnimationFrame(draw);
+
+                            // updateSvg();
+                            H[otherIdx[0]][otherIdx[1]] = otherPossiblePatterns.filter(valid => valid).length;
+                            // setColorAt(otherIdx[0], otherIdx[1]);
+
+                            // MARK TODO: ELEMENTS NOT "live" UPDATING
+                            //------------------------------------------------//
+                            let x = otherIdx[0];
+                            let y = otherIdx[1];
+
+                            if (H[x][y] == 0) {
+                                console.log("Knotted! Unable to progress, starting over...");
+                            } else if (H[x][y] == 1) {
+                                let pattern;
+                                for (let i = 0; i < W[x][y].length; i++) {
+                                    if (W[x][y][i]) {
+                                        pattern = patterns[i];
+                                        break;
+                                    }
+                                }
+                                rects[x][y].style.fill = pattern.colors[0][0].toRgb();
+                                rects[x][y].style.stroke = pattern.colors[0][0].toRgb();
+                            } else if (DRAW_STATES) {
+                                // average colors
+                                let r = 0;
+                                let g = 0;
+                                let b = 0;
+                                let count = 0;
+                                for (let i = 0; i < W[x][y].length; i++) {
+                                    if (W[x][y][i]) {
+                                        r += patterns[i].colors[0][0].r;
+                                        g += patterns[i].colors[0][0].g;
+                                        b += patterns[i].colors[0][0].b;
+                                        count++;
+                                    }
+                                }
+                                r /= count;
+                                g /= count;
+                                b /= count;
+                                const style = `rgb(${r}, ${g}, ${b})`;
+                                console.log({ iteration, stack, style });
+                                rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
+                                rects[x][y].style.stroke = `rgb(${r}, ${g}, ${b})`;
+                            }
+                            //------------------------------------------------//
                         }
                     }
                 }
@@ -420,20 +460,15 @@ function propagate(collapsedIdx) {
     }
 }
 function iterate() {
+    iteration++;
+
     setH();
     const lowestValidStatesIds = findLowestEntropySpots();
 
-    if (LOOP || FORCE_NEXT) {
+    const idxToCollapse = randomFromList(lowestValidStatesIds);
+    collapse(idxToCollapse);
 
-        iteration++;
-
-        const idxToCollapse = randomFromList(lowestValidStatesIds);
-        collapse(idxToCollapse);
-
-        propagate(idxToCollapse);
-
-        FORCE_NEXT = false;
-    }
+    propagate(idxToCollapse);
 }
 //----------------------------------------------------------------------------//
 
@@ -535,47 +570,65 @@ function iterate() {
 //     }
 // }
 
+function setColorAt(x, y) {
+    if (H[x][y] == 0) {
+        console.log("Knotted! Unable to progress, starting over...")
+        createW();
+    } else if (H[x][y] == 1) {
+        let pattern;
+        for (let i = 0; i < W[x][y].length; i++) {
+            if (W[x][y][i]) {
+                pattern = patterns[i];
+                break;
+            }
+        }
+        rects[x][y].style.fill = pattern.colors[0][0].toRgb();
+        rects[x][y].style.stroke = pattern.colors[0][0].toRgb();
+    } else if (DRAW_STATES) {
+        // average colors
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        let count = 0;
+        for (let i = 0; i < W[x][y].length; i++) {
+            if (W[x][y][i]) {
+                r += patterns[i].colors[0][0].r;
+                g += patterns[i].colors[0][0].g;
+                b += patterns[i].colors[0][0].b;
+                count++;
+            }
+        }
+        r /= count;
+        g /= count;
+        b /= count;
+        rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
+        rects[x][y].style.stroke = `rgb(${r}, ${g}, ${b})`;
+    }
+}
 function updateSvg() {
+    // console.log("bbb");
+    setH();
+
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            if (H[x][y] == 0) {
-                console.log("Knotted! Unable to progress, starting over...")
-                createW();
-                break;
-            } else if (H[x][y] == 1) {
-                let pattern;
-                for (let i = 0; i < W[x][y].length; i++) {
-                    if (W[x][y][i]) {
-                        pattern = patterns[i];
-                        break;
-                    }
-                }
-                rects[x][y].style.fill = pattern.colors[0][0].toRgb();
-                rects[x][y].style.stroke = pattern.colors[0][0].toRgb();
-            } else if (DRAW_STATES) {
-                // average colors
-                let r = 0;
-                let g = 0;
-                let b = 0;
-                let count = 0;
-                for (let i = 0; i < W[x][y].length; i++) {
-                    if (W[x][y][i]) {
-                        r += patterns[i].colors[0][0].r;
-                        g += patterns[i].colors[0][0].g;
-                        b += patterns[i].colors[0][0].b;
-                        count++;
-                    }
-                }
-                r /= count;
-                g /= count;
-                b /= count;
-                rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
-                rects[x][y].style.stroke = `rgb(${r}, ${g}, ${b})`;
-            }
+            setColorAt(x, y);
         }
     }
 }
+function mainLoop() {
+    for (let i = 0; i < SPEED; i++) {
+        if (LOOP || FORCE_NEXT) {
+            iterate();   
+            FORCE_NEXT = false;
+        }
+    }
 
+    // updateSvg();
+
+    setDelta();
+    const fps = (1000 / delta).toFixed(0);
+    console.log("FPS: " + fps);
+}
 //----------------------------------------------------------------------------//
 
 
@@ -589,6 +642,7 @@ function keyDownHandle(e) {
             break;    
         case " ":
             FORCE_NEXT = true;
+            iterate();
             break;
         case "escape":
             LOOP = false;

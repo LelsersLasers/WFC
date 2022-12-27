@@ -18,6 +18,7 @@ Takes 1 input image.
 - Is it actually working???
 - Speed?
     - Prop rewrite with classes instead of W
+- Remove H??
 - Optional WRAP
 - Add flips/rotations to pattern data
 - Weighted choices
