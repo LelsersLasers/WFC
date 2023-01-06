@@ -17,13 +17,14 @@ Takes 1 input image.
 
 - Is it actually working???
 - Speed?
-    - Prop rewrite with classes instead of W
+    - Prob rewrite with classes instead of W
 - Remove H??
 - Optional WRAP
 - Add flips/rotations to pattern data
 - Weighted choices
 - Improve UI
     - Spinning thing when loading
+	- Live update svg rect elements as they get changed in propagate()
 - Resources:
 	- https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
 	- https://github.com/mxgmn/WaveFunctionCollapse
