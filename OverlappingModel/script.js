@@ -1,7 +1,7 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-// const WRAP = false;
+// const WRAP = false; // TODO
 
 const SPEED = 1;
 

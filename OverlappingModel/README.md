@@ -4,11 +4,11 @@ Takes 1 input image.
 
 ## Keybinds
 
-- Enter: toggle auto progress
-- Space: progress 1 iteration
+- Enter: toggle auto collapse on propogate finish
+- Space: collapse 1 cell and propagate
 - Escape: stop auto progress
 - D: toggle drawing valid states of non-collapsed cells
-- O: toggle drawing outline boarder of valid tile spots
+- O: toggle drawing outline boarder of valid tile spots (doesn't work)
 - E: toggle drawing outline around grid tiles
 - H: toggle drawing entropy
 - R: reset grid
@@ -18,6 +18,7 @@ Takes 1 input image.
 - "Throttoling" when not propagating?
     - Right now: 100%s a CPU core thread
         - While propagating and while not propagating
+- Fix outline (run time option)
 - Speed?
     - Prob rewrite with classes instead of W
     - Remove H??
@@ -33,6 +34,7 @@ Takes 1 input image.
         - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML
     - And a start menu for non "run time" options
         - Wrap, N, upload picture there, dims, which flips/rotations to use, ceiling/floor pixels, etc
+        - Like wordle single player create game page
 - Clean?
 ## Resources
 
