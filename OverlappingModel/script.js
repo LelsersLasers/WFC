@@ -15,7 +15,7 @@ let DRAW_OUTLINE = true;
 let DRAW_EDGES = true;
 let DRAW_H = true;
 
-let LOOP = true;
+let LOOP = false;
 let FORCE_NEXT = false;
 
 let iteration = 0;
@@ -277,13 +277,15 @@ function setDelta() {
 //----------------------------------------------------------------------------//
 
 
+//----------------------------------------------------------------------------//
 function toId(x, y) {
     return x + "_" + y;
 }
-function fromId(id) {
-    const split = id.split("_");
-    return {x: parseInt(split[0]), y: parseInt(split[1])};
-}
+// function fromId(id) {
+//     const split = id.split("_");
+//     return {x: parseInt(split[0]), y: parseInt(split[1])};
+// }
+//----------------------------------------------------------------------------//
 
 
 //----------------------------------------------------------------------------//
@@ -318,7 +320,6 @@ function setH() {
         }
     }
 }
-
 function findLowestEntropySpots() {
     let lowestE = patterns.length;
     let lowestEIds = [];
@@ -360,113 +361,112 @@ function collapse(idx) {
         }
     }
 }
-function propagate(collapsedIdx) {
-    const stack = [collapsedIdx];
-    while (stack.length > 0) {
+function propagate(stack) {
 
-        console.log({ iteration, stack })
+    // note: stack is directly modified
 
-        let currentIdx = stack.pop();
-        for (let offsetX = -N + 1; offsetX < N; offsetX++) {
-            for (let offsetY = -N + 1; offsetY < N; offsetY++) {
-                if (offsetX == 0 && offsetY == 0) {
-                    continue;
-                }
-                let otherIdx = [
-                    (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
-                    (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
-                ];
-                let otherPossiblePatterns = W[otherIdx[0]][otherIdx[1]];
-                let currentPossiblePatterns = W[currentIdx[0]][currentIdx[1]];
-                // for every still possible pattern at the current spot, get the overlaps for the matching offset
-                let currentPossibleOverlaps = [];
-                for (let i = 0; i < currentPossiblePatterns.length; i++) {
-                    if (currentPossiblePatterns[i]) { // if pattern is still possible
-                        let pattern = patterns[i];
-                        for (let j = 0; j < pattern.overlaps.length; j++) { // for every overlap
-                            let overlap = pattern.overlaps[j];
-                            // if overlap matches offset and is not already added
-                            // !some is !includes but with 'match' instead of '=='
-                            if (overlap.offsetX == offsetX && overlap.offsetY == offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
-                                currentPossibleOverlaps.push(overlap);
-                            }
+    console.log({ iteration, stack })
+
+    let currentIdx = stack.pop();
+    for (let offsetX = -N + 1; offsetX < N; offsetX++) {
+        for (let offsetY = -N + 1; offsetY < N; offsetY++) {
+            if (offsetX == 0 && offsetY == 0) {
+                continue;
+            }
+            let otherIdx = [
+                (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
+                (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
+            ];
+            let otherPossiblePatterns = W[otherIdx[0]][otherIdx[1]];
+            let currentPossiblePatterns = W[currentIdx[0]][currentIdx[1]];
+            // for every still possible pattern at the current spot, get the overlaps for the matching offset
+            let currentPossibleOverlaps = [];
+            for (let i = 0; i < currentPossiblePatterns.length; i++) {
+                if (currentPossiblePatterns[i]) { // if pattern is still possible
+                    let pattern = patterns[i];
+                    for (let j = 0; j < pattern.overlaps.length; j++) { // for every overlap
+                        let overlap = pattern.overlaps[j];
+                        // if overlap matches offset and is not already added
+                        // !some is !includes but with 'match' instead of '=='
+                        if (overlap.offsetX == offsetX && overlap.offsetY == offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
+                            currentPossibleOverlaps.push(overlap);
                         }
                     }
                 }
-                // for every still possible pattern at the other spot, the pattern is in one of the possible overlaps
-                for (let i = 0; i < otherPossiblePatterns.length; i++) {
-                    if (otherPossiblePatterns[i]) { // if pattern is still possible
-                        let otherPattern = patterns[i];
-                        let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
-                        // if there are no overlaps that match the pattern, remove it
-                        if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
-                            otherPossiblePatterns[i] = false;
-                            // if this spot was affected, also affect its neighbors
-                            // but no need to add it to the stack if it is already there
-                            let inStack = false;
-                            for (let a = 0; a < stack.length; a++) {
-                                if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
-                                    inStack = true;
-                                }
+            }
+            // for every still possible pattern at the other spot, the pattern is in one of the possible overlaps
+            for (let i = 0; i < otherPossiblePatterns.length; i++) {
+                if (otherPossiblePatterns[i]) { // if pattern is still possible
+                    let otherPattern = patterns[i];
+                    let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
+                    // if there are no overlaps that match the pattern, remove it
+                    if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
+                        otherPossiblePatterns[i] = false;
+                        // if this spot was affected, also affect its neighbors
+                        // but no need to add it to the stack if it is already there
+                        let inStack = false;
+                        for (let a = 0; a < stack.length; a++) {
+                            if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
+                                inStack = true;
                             }
-                            if (!inStack) {
-                                stack.push([otherIdx[0], otherIdx[1]]);
-                            }
-
-                            // console.log("aaa");
-
-                            // updateSvg();
-                            H[otherIdx[0]][otherIdx[1]] = otherPossiblePatterns.filter(valid => valid).length;
-
-
-                            // MARK TODO: ELEMENTS NOT "live" UPDATING
-                            //------------------------------------------------//
-
-                            setColorAt(otherIdx[0], otherIdx[1]);
-
-                            // let x = otherIdx[0];
-                            // let y = otherIdx[1];
-
-                            // if (H[x][y] == 0) {
-                            //     console.log("Knotted! Unable to progress, starting over...");
-                            // } else if (H[x][y] == 1) {
-                            //     let pattern;
-                            //     for (let i = 0; i < W[x][y].length; i++) {
-                            //         if (W[x][y][i]) {
-                            //             pattern = patterns[i];
-                            //             break;
-                            //         }
-                            //     }
-                            //     // (!pattern) should always be false
-                            //     const style = pattern.colors[0][0].toRgb();
-                            //     rects[x][y].style.fill = style;
-                            //     rects[x][y].style.stroke = style;
-                            // } else if (DRAW_STATES) {
-                            //     // average colors
-                            //     let r = 0;
-                            //     let g = 0;
-                            //     let b = 0;
-                            //     let count = 0;
-                            //     for (let i = 0; i < W[x][y].length; i++) {
-                            //         if (W[x][y][i]) {
-                            //             r += patterns[i].colors[0][0].r;
-                            //             g += patterns[i].colors[0][0].g;
-                            //             b += patterns[i].colors[0][0].b;
-                            //             count++;
-                            //         }
-                            //     }
-                            //     r /= count;
-                            //     g /= count;
-                            //     b /= count;
-
-                            //     const style = `rgb(${r}, ${g}, ${b})`;
-                            //     // console.log({ iteration, stack, style });
-                            //     // console.log("setting color");
-                            //     rects[x][y].style.fill = style;
-                            //     rects[x][y].style.stroke = style;
-                            // }
-                            //------------------------------------------------//
                         }
+                        if (!inStack) {
+                            stack.push([otherIdx[0], otherIdx[1]]);
+                        }
+
+                        console.log("aaa");
+
+                        // updateSvg();
+                        H[otherIdx[0]][otherIdx[1]] = otherPossiblePatterns.filter(valid => valid).length;
+
+
+                        // MARK TODO: ELEMENTS NOT "live" UPDATING
+                        //------------------------------------------------//
+
+                        setColorAt(otherIdx[0], otherIdx[1]);
+
+                        // let x = otherIdx[0];
+                        // let y = otherIdx[1];
+
+                        // if (H[x][y] == 0) {
+                        //     console.log("Knotted! Unable to progress, starting over...");
+                        // } else if (H[x][y] == 1) {
+                        //     let pattern;
+                        //     for (let i = 0; i < W[x][y].length; i++) {
+                        //         if (W[x][y][i]) {
+                        //             pattern = patterns[i];
+                        //             break;
+                        //         }
+                        //     }
+                        //     // (!pattern) should always be false
+                        //     const style = pattern.colors[0][0].toRgb();
+                        //     rects[x][y].style.fill = style;
+                        //     rects[x][y].style.stroke = style;
+                        // } else if (DRAW_STATES) {
+                        //     // average colors
+                        //     let r = 0;
+                        //     let g = 0;
+                        //     let b = 0;
+                        //     let count = 0;
+                        //     for (let i = 0; i < W[x][y].length; i++) {
+                        //         if (W[x][y][i]) {
+                        //             r += patterns[i].colors[0][0].r;
+                        //             g += patterns[i].colors[0][0].g;
+                        //             b += patterns[i].colors[0][0].b;
+                        //             count++;
+                        //         }
+                        //     }
+                        //     r /= count;
+                        //     g /= count;
+                        //     b /= count;
+
+                        //     const style = `rgb(${r}, ${g}, ${b})`;
+                        //     // console.log({ iteration, stack, style });
+                        //     // console.log("setting color");
+                        //     rects[x][y].style.fill = style;
+                        //     rects[x][y].style.stroke = style;
+                        // }
+                        //------------------------------------------------//
                     }
                 }
             }
@@ -487,7 +487,10 @@ function iterate() {
     // }
     collapse(idxToCollapse);
 
-    propagate(idxToCollapse);
+    let stack = [idxToCollapse];
+    while (stack.length > 0) {
+        propagate(stack);
+    }
 }
 //----------------------------------------------------------------------------//
 
