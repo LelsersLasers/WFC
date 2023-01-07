@@ -534,13 +534,7 @@ function propagate(collapsedIdx) {
                 if (!possibleNiegbors.includes(otherState)) {
                     wave[otherIdx[0]][otherIdx[1]].validStates = wave[otherIdx[0]][otherIdx[1]].validStates.filter(s => s != otherState);
 
-                    let i = false;
-                    for (let a = 0; a < stack.length; a++) {
-                        if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
-                            i = true;
-                        }
-                    }
-                    if (!i) {
+                    if (!stack.some(idx => idx[0] == otherIdx[0] && idx[1] == otherIdx[1])) {
                         stack.push([otherIdx[0], otherIdx[1]]);
                     }
                 }

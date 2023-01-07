@@ -26,8 +26,6 @@ const svgns = "http://www.w3.org/2000/svg";
 const svg = document.getElementById("mainSvg");
 setupSvg();
 
-const font = "monospace";
-
 let delta = 1/60;
 let lastTime = performance.now();
 
@@ -232,6 +230,8 @@ function swapToSvgAndStart() {
     setInterval(mainLoop, 1);
 }
 function createW() {
+    stack.length = 0;
+
     W.length = 0;
     H.length = 0;
 
@@ -282,7 +282,7 @@ function createW() {
             text.style.fill = "red";
 
             text.setAttribute("font-size", TILE_SIZE / 3);
-            text.innerHTML = "0";
+            text.innerHTML = "";
 
             svg.appendChild(text);
             texts[x].push(text);
@@ -436,13 +436,7 @@ function propagate() {
                         otherPossiblePatterns[i] = false;
                         // if this spot was affected, also affect its neighbors
                         // but no need to add it to the stack if it is already there
-                        let inStack = false;
-                        for (let a = 0; a < stack.length; a++) {
-                            if (stack[a][0] == otherIdx[0] && stack[a][1] == otherIdx[1]) {
-                                inStack = true;
-                            }
-                        }
-                        if (!inStack) {
+                        if (!stack.some(idx => idx[0] == otherIdx[0] && idx[1] == otherIdx[1])) {
                             stack.push([otherIdx[0], otherIdx[1]]);
                         }
 
@@ -651,7 +645,6 @@ function keyDownHandle(e) {
             break;    
         case " ":
             FORCE_NEXT = true;
-            iterate();
             break;
         case "escape":
             LOOP = false;
@@ -664,21 +657,7 @@ function keyDownHandle(e) {
             break;
         case "e":
             DRAW_EDGES = !DRAW_EDGES;
-
-            for (let x = 0; x < DIMS_X; x++) {
-                for (let y = 0; y < DIMS_Y; y++) {
-                    if (DRAW_EDGES) {
-                        if (H[x][y] == 1) {
-                            rects[x][y].style.stroke = "blue";
-                        } else {
-                            rects[x][y].style.stroke = "white";
-                        }
-                    } else {
-                        rects[x][y].style.stroke = rects[x][y].style.fill;
-                    }
-                }
-            }
-
+            updateSvg();
             break;
         case "h":
             DRAW_H = !DRAW_H;
