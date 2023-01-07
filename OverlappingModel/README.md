@@ -15,16 +15,26 @@ Takes 1 input image.
 
 ## Todo?
 
-- Is it actually working???
+- "Throttoling" when not propagating?
+    - Right now: 100%s a CPU core thread
+        - While propagating and while not propagating
 - Speed?
     - Prob rewrite with classes instead of W
-- Remove H??
+    - Remove H??
 - Optional WRAP
 - Add flips/rotations to pattern data
 - Weighted choices
+- Optional ceiling/floor pixels
+    - To better "replicate" the input image
 - Improve UI
-    - Spinning thing when loading
-	- Live update svg rect elements as they get changed in propagate()
-- Resources:
-	- https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
-	- https://github.com/mxgmn/WaveFunctionCollapse
+    - Maybe make it like the 3d cellular automata
+        - https://lelserslasers.itch.io/3d-cellular-automata-wgpu-rust
+        - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML
+    - And a start menu for non "run time" options
+        - Wrap, N, upload picture there, dims, which flips/rotations to use, ceiling/floor pixels, etc
+- Clean?
+    - maybe just use stack.length == 0 instead of stack == null?
+## Resources
+
+- https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
+- https://github.com/mxgmn/WaveFunctionCollapse

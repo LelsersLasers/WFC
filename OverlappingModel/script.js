@@ -12,7 +12,7 @@ const N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_OUTLINE = true; // TODO
-let DRAW_EDGES = true;
+let DRAW_EDGES = false;
 let DRAW_H = false;
 
 let LOOP = true;
@@ -225,6 +225,10 @@ function swapToSvgAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createW();
     
+    // run main loop (1 propagation + 1 updateSvg) as fast as possible
+    // the next interval proc/tick will not start until the previous one is done
+    // inbetween the ticks, changes to the browser window elements (including the svg) take effect
+    // (this is just the way browser JS works)
     setInterval(mainLoop, 1);
 }
 function createW() {
@@ -617,10 +621,10 @@ function updateSvg() {
     }
 }
 function mainLoop() {
-    if (stack != null) {
+    if (stack != null) { // in the middle of propagating
         if (stack.length > 0) {
             propagate();
-        } else {
+        } else { // finished propagating
             stack = null;
         }
     } else {
