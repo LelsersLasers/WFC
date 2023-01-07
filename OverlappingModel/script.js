@@ -13,7 +13,7 @@ const N = 3;
 let DRAW_STATES = true;
 let DRAW_OUTLINE = true; // TODO
 let DRAW_EDGES = true;
-let DRAW_H = true; // TODO
+let DRAW_H = false;
 
 let LOOP = true;
 let FORCE_NEXT = false;
@@ -45,6 +45,7 @@ const W = [];
 const H = [];
 
 const rects = [];
+const texts = [];
 
 let stack = null;
 //----------------------------------------------------------------------------//
@@ -229,20 +230,27 @@ function swapToSvgAndStart() {
 function createW() {
     W.length = 0;
     H.length = 0;
+
     rects.length = 0;
+    texts.length = 0;
+
     svg.innerHTML = '';
 
     for (let x = 0; x < DIMS_X; x++) {
         W.push([]);
         H.push([]);
+
         rects.push([]);
+        texts.push([]);
 
         for (let y = 0; y < DIMS_Y; y++) {
 
             W[x].push(patterns.map(_p => true));
             H[x].push(patterns.length);
 
+
             const rect = document.createElementNS(svgns, "rect");
+
             rect.setAttribute("x", TILE_OFFSET_X + x * (TILE_SIZE + 1));
             rect.setAttribute("y", TILE_OFFSET_Y + y * (TILE_SIZE + 1));
             rect.setAttribute("width", TILE_SIZE);
@@ -255,6 +263,25 @@ function createW() {
 
             svg.appendChild(rect);
             rects[x].push(rect);
+
+
+            const text = document.createElementNS(svgns, "text");
+
+            text.setAttribute("x", TILE_OFFSET_X + (x + 0.5) * (TILE_SIZE + 1));
+            text.setAttribute("y", TILE_OFFSET_Y + (y + 0.5) * (TILE_SIZE + 1));
+            
+            text.setAttribute("text-anchor", "middle");
+            text.style.textAlign = "center";
+            text.style.alignmentBaseline = "middle";
+            text.style.verticalAlign = "middle";
+
+            text.style.fill = "red";
+
+            text.setAttribute("font-size", TILE_SIZE / 3);
+            text.innerHTML = "0";
+
+            svg.appendChild(text);
+            texts[x].push(text);
         }
     }
     updateSvg();
@@ -318,6 +345,11 @@ function setH() {
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             H[x][y] = W[x][y].filter(valid => valid).length;
+            if (DRAW_H) {
+                texts[x][y].innerHTML = H[x][y];
+            } else {
+                texts[x][y].innerHTML = "";
+            }
         }
     }
 }
