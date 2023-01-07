@@ -11,14 +11,12 @@ const N = 3;
 
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
-let DRAW_OUTLINE = true;
+let DRAW_OUTLINE = true; // TODO
 let DRAW_EDGES = true;
-let DRAW_H = true;
+let DRAW_H = true; // TODO
 
 let LOOP = true;
 let FORCE_NEXT = false;
-
-let iteration = 0;
 //----------------------------------------------------------------------------//
 
 
@@ -34,8 +32,10 @@ let delta = 1/60;
 let lastTime = performance.now();
 
 const TILE_SIZE = Math.floor(calcTileSize());
-const TILE_OFFSET_X = Math.floor((svg.getAttribute("width") - (TILE_SIZE * DIMS_X)) / 2);
-const TILE_OFFSET_Y = Math.floor((svg.getAttribute("height") - (TILE_SIZE * DIMS_Y)) / 2);
+const TILE_OFFSET_X = Math.floor((svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2);
+const TILE_OFFSET_Y = Math.floor((svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2);
+
+let iteration = 0;
 
 let sourceImg = new Image();
 
@@ -192,8 +192,6 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 
 //----------------------------------------------------------------------------//
 function setupSvg() {
-    const svg = document.getElementById("mainSvg");
-
     console.log("Window is " + window.innerWidth +" by " + window.innerHeight);
 
     const maxW = window.innerWidth - 20;
@@ -245,14 +243,15 @@ function createW() {
             H[x].push(patterns.length);
 
             const rect = document.createElementNS(svgns, "rect");
-            rect.setAttribute("x", TILE_OFFSET_X + x * TILE_SIZE);
-            rect.setAttribute("y", TILE_OFFSET_Y + y * TILE_SIZE);
+            rect.setAttribute("x", TILE_OFFSET_X + x * (TILE_SIZE + 1));
+            rect.setAttribute("y", TILE_OFFSET_Y + y * (TILE_SIZE + 1));
             rect.setAttribute("width", TILE_SIZE);
             rect.setAttribute("height", TILE_SIZE);
 
-            rect.id = toId(x, y);
-
+            rect.setAttribute("stroke-width", 2);
             rect.style.fill = "black";
+
+            rect.id = toId(x, y);
 
             svg.appendChild(rect);
             rects[x].push(rect);
@@ -307,7 +306,7 @@ function calcTileSize() {
     // Calculate the tile size
     const tileW = svg.getAttribute("width") / DIMS_X;
     const tileH = svg.getAttribute("height") / DIMS_Y;
-    const tileSize = Math.min(tileW, tileH);
+    const tileSize = Math.min(tileW, tileH) - 1;
 
     return tileSize;
 }
@@ -346,10 +345,10 @@ function findLowestEntropySpots() {
         LOOP = false;
         FORCE_NEXT = false;
         console.log("Fully collapsed!");
-
-        updateSvg();
+        return null;
+    } else {
+        return lowestEIds;
     }
-    return lowestEIds;
 }
 function collapse(idx) {
     H[idx[0]][idx[1]] = 1;
@@ -411,9 +410,9 @@ function propagate() {
                             stack.push([otherIdx[0], otherIdx[1]]);
                         }
 
-                        H[otherIdx[0]][otherIdx[1]] = otherPossiblePatterns.filter(valid => valid).length;
+                        // H[otherIdx[0]][otherIdx[1]] = otherPossiblePatterns.filter(valid => valid).length;
 
-                        setColorAt(otherIdx[0], otherIdx[1]);
+                        // setColorAt(otherIdx[0], otherIdx[1]);
                     }
                 }
             }
@@ -425,13 +424,12 @@ function iterate() {
 
     setH();
     const lowestValidStatesIds = findLowestEntropySpots();
+    if (lowestValidStatesIds == null) { // null when completely collapsed
+        return;
+    }
 
     const idxToCollapse = randomFromList(lowestValidStatesIds);
-    // if (!idxToCollapse) {
-    //     console.log("Knotted! Unable to progress, starting over...");
-    //     // createW();
-    //     return;
-    // }
+    
     collapse(idxToCollapse);
 
     stack = [idxToCollapse];
@@ -544,9 +542,7 @@ function setColorAt(x, y) {
                 break;
             }
         }
-        const style = pattern.colors[0][0].toRgb();
-        rects[x][y].style.fill = style;
-        rects[x][y].style.stroke = style;
+        rects[x][y].style.fill = pattern.colors[0][0].toRgb();
     } else if (DRAW_STATES) {
         // average colors
         let r = 0;
@@ -565,9 +561,18 @@ function setColorAt(x, y) {
         g /= count;
         b /= count;
         
-        const style = `rgb(${r}, ${g}, ${b})`;
-        rects[x][y].style.fill = style;
-        rects[x][y].style.stroke = style;
+        rects[x][y].style.fill = `rgb(${r}, ${g}, ${b})`;
+    } else {
+        rects[x][y].style.fill = "black";
+    }
+    if (DRAW_EDGES) {
+        if (H[x][y] == 1) {
+            rects[x][y].style.stroke = "blue";
+        } else {
+            rects[x][y].style.stroke = "white";
+        }
+    } else {
+        rects[x][y].style.stroke = rects[x][y].style.fill;
     }
 }
 function updateSvg() {
@@ -591,9 +596,9 @@ function mainLoop() {
             iterate();   
             FORCE_NEXT = false;
         }
-    
-        // updateSvg();
     }
+
+    updateSvg();
     
     setDelta();
     const fps = parseInt((1000 / delta).toFixed(0));
@@ -625,6 +630,21 @@ function keyDownHandle(e) {
             break;
         case "e":
             DRAW_EDGES = !DRAW_EDGES;
+
+            for (let x = 0; x < DIMS_X; x++) {
+                for (let y = 0; y < DIMS_Y; y++) {
+                    if (DRAW_EDGES) {
+                        if (H[x][y] == 1) {
+                            rects[x][y].style.stroke = "blue";
+                        } else {
+                            rects[x][y].style.stroke = "white";
+                        }
+                    } else {
+                        rects[x][y].style.stroke = rects[x][y].style.fill;
+                    }
+                }
+            }
+
             break;
         case "h":
             DRAW_H = !DRAW_H;
