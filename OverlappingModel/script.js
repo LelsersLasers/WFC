@@ -47,7 +47,7 @@ const H = [];
 const rects = [];
 const texts = [];
 
-let stack = null;
+let stack = [];
 //----------------------------------------------------------------------------//
 
 
@@ -621,12 +621,10 @@ function updateSvg() {
     }
 }
 function mainLoop() {
-    if (stack != null) { // in the middle of propagating
-        if (stack.length > 0) {
-            propagate();
-        } else { // finished propagating
-            stack = null;
-        }
+    // imagine that this function is wrapped in a `while (true)`
+
+    if (stack.length > 0) { // in the middle of propagating
+        propagate();
     } else {
         if (LOOP || FORCE_NEXT) {
             iterate();   

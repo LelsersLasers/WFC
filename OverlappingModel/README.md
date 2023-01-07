@@ -21,6 +21,7 @@ Takes 1 input image.
 - Speed?
     - Prob rewrite with classes instead of W
     - Remove H??
+    - Lots of unnecessary/duplicated updating
 - Optional WRAP
 - Add flips/rotations to pattern data
 - Weighted choices
@@ -33,7 +34,6 @@ Takes 1 input image.
     - And a start menu for non "run time" options
         - Wrap, N, upload picture there, dims, which flips/rotations to use, ceiling/floor pixels, etc
 - Clean?
-    - maybe just use stack.length == 0 instead of stack == null?
 ## Resources
 
 - https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
