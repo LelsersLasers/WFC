@@ -194,18 +194,33 @@ class GridSpot {
         this.x = x;
         this.y = y;
 
-        this.validPatterns = patterns.slice();
+        this.validPatterns = patterns.slice(); // all possible patterns
+
+        this.validStates = []; // no duplicates
+        for (const pattern of this.validPatterns) {
+            if (!this.validStates.some(p => p.matches(pattern))) {
+                this.validStates.push(pattern);
+            }
+        }
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
         this.validPatterns = [pattern];
+        this.validStates = [pattern];
+    }
+    updateValidPatterns() {
+        if (this.validStates.length == 1) {
+            this.validPatterns = [this.validStates[0]];
+        } else {
+            this.validPatterns = this.validPatterns.filter((pattern) => this.validStates.some((p) => p.matches(pattern)));
+        }
     }
     setColor() {
-        if (this.validPatterns.length == 0) {
+        if (this.validStates.length == 0) {
             console.log("Knotted! Unable to progress, starting over...")
             createGrid();
-        } else if (this.validPatterns.length == 1) {
-            const pattern = this.validPatterns[0];
+        } else if (this.validStates.length == 1) {
+            const pattern = this.validStates[0];
             this.rect.style.fill = pattern.colors[0][0].toRgb();
         } else if (DRAW_STATES) {
             // average colors
@@ -228,7 +243,7 @@ class GridSpot {
         }
 
         if (DRAW_EDGES) {
-            if (this.validPatterns.length == 1) {
+            if (this.validStates.length == 1) {
                 this.rect.style.stroke = "blue";
             } else {
                 this.rect.style.stroke = "white";
@@ -293,11 +308,9 @@ function swapToSvgAndStart() {
 
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
-            // TODO: weighting patterns
+            // TODO: pattern rotations/flips
             const pattern = new Pattern(x, y);
-            if (!patterns.some(p => p.matches(pattern))) {
-                patterns.push(pattern);
-            }
+            patterns.push(pattern);
         }
     }
 
@@ -428,8 +441,9 @@ function propagate() {
                 (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
             ];
 
-            let otherPossiblePatterns = grid[otherIdx[0]][otherIdx[1]].validPatterns;
-            let currentPossiblePatterns = grid[currentIdx[0]][currentIdx[1]].validPatterns;
+            // use versions without duplicates
+            let otherPossiblePatterns = grid[otherIdx[0]][otherIdx[1]].validStates;
+            let currentPossiblePatterns = grid[currentIdx[0]][currentIdx[1]].validStates;
 
             // for every still possible pattern at the current spot, get the overlaps for the matching offset
             let currentPossibleOverlaps = [];
@@ -453,7 +467,7 @@ function propagate() {
                     
                     // remove 1 element, starting from index i
                     otherPossiblePatterns.splice(i, 1);
-                    // grid[otherIdx[0]][otherIdx[1]].validPatterns = grid[otherIdx[0]][otherIdx[1]].validPatterns.filter(p => p != otherPattern);
+                    grid[otherIdx[0]][otherIdx[1]].updateValidPatterns();
 
 
                     // if this spot was affected, also affect its neighbors

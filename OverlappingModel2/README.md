@@ -14,16 +14,11 @@ Takes 1 input image.
 
 ## Todo?
 
-- "Throttling" when not propagating?
-    - Use the events
-        - Run main loop while propagating
-        - Otherwise react to key events
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
 - Optional WRAP
 - Add flips/rotations to pattern data
-- Weighted choices
 - Optional ceiling/floor pixels
     - To better "replicate" the input image
 - Improve UI
