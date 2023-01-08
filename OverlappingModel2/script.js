@@ -1,12 +1,18 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-// const WRAP = false; // TODO
-const ROTATE_AND_FLIP = true;
-
-const SPEED = 1;
+const WRAP = false; // TODO
 
 const N = 3;
+
+const E_OFFSET = WRAP ? 0 : N - 1;
+
+const E_DIMS_X = DIMS_X + 2 * E_OFFSET;
+const E_DIMS_Y = DIMS_Y + 2 * E_OFFSET;
+
+const ROTATE_AND_FLIP = false;
+
+const SPEED = 1;
 //----------------------------------------------------------------------------//
 
 
@@ -52,6 +58,7 @@ class Color {
         this.r = r;
         this.g = g;
         this.b = b;
+        this.a = a;
     }
     matches(other) {
         return this.r === other.r && this.g === other.g && this.b === other.b && this.a === other.a;
@@ -75,12 +82,15 @@ class Overlap {
 class Pattern {
     constructor(offsetX, offsetY) {
 
+        const eSourceImgW = sourceImg.width + 2 * E_OFFSET;
+        const eSourceImgH = sourceImg.height + 2 * E_OFFSET;
+
         const canv = document.createElement("canvas");
-        canv.width = sourceImg.width;
-        canv.height = sourceImg.height;
+        canv.width = eSourceImgW;
+        canv.height = eSourceImgH;
         const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
 
-        ctx.drawImage(sourceImg, 0, 0, sourceImg.width, sourceImg.height);
+        ctx.drawImage(sourceImg, E_OFFSET, E_OFFSET, sourceImg.width, sourceImg.height);
 
         this.colors = [];
 
@@ -92,12 +102,18 @@ class Pattern {
 
         for (let x = 0; x < N; x++) {
             for (let y = 0; y < N; y++) {
-                const spotX = (x + offsetX + sourceImg.width) % sourceImg.width;
-                const spotY = (y + offsetY + sourceImg.height) % sourceImg.height;
+                
+                let spotX = (x + offsetX + sourceImg.width) % sourceImg.width;
+                let spotY = (y + offsetY + sourceImg.height) % sourceImg.height;
+
+                if (!WRAP) {
+                    spotX = x + offsetX;
+                    spotY = y + offsetY;
+                }
                 
                 const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
                 
-                const color = new Color(pixel[0], pixel[1], pixel[2]);
+                const color = new Color(pixel[0], pixel[1], pixel[2], pixel[3]);
 
                 const flippedY = flippedCoords[y];
 
@@ -376,9 +392,9 @@ function createGrid() {
     grid.length = 0;
     stack.length = 0;
 
-    for (let x = 0; x < DIMS_X; x++) {
+    for (let x = 0; x < E_DIMS_X; x++) {
         grid.push([]);
-        for (let y = 0; y < DIMS_Y; y++) {
+        for (let y = 0; y < E_DIMS_Y; y++) {
             grid[x].push(new GridSpot(x, y));
         }
     }
@@ -445,8 +461,8 @@ function findLowestEntropySpots() {
     let lowestEIds = [];
     let fullyCollapsed = true;
 
-    for (let x = 0; x < DIMS_X; x++) {
-        for (let y = 0; y < DIMS_Y; y++) {
+    for (let x = 0; x < E_DIMS_X; x++) {
+        for (let y = 0; y < E_DIMS_Y; y++) {
             if (grid[x][y].validPatterns.length > 1) {
                 fullyCollapsed = false;
                 if (grid[x][y].validPatterns.length < lowestE) {
@@ -479,6 +495,7 @@ function propagate() {
                 continue;
             }
 
+            // TODO
             let otherIdx = [
                 (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
                 (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y

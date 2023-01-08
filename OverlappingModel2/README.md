@@ -34,3 +34,10 @@ Takes 1 input image.
 
 - https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
 - https://github.com/mxgmn/WaveFunctionCollapse
+
+
+## Wrap
+
+- Input into Pattern.constructor()
+    - offsetX: 0 to E_OFFSET + sourceImg.width
+    - offsetY: 0 to E_OFFSET + sourceImg.height
