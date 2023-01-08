@@ -17,8 +17,8 @@ Takes 1 input image.
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
+        - Likely all my "some" iteration
 - Optional WRAP
-- Add flips/rotations to pattern data
 - Optional ceiling/floor pixels
     - To better "replicate" the input image
 - Improve UI

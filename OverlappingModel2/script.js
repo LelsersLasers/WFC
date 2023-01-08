@@ -2,6 +2,7 @@ const DIMS_X = 20;
 const DIMS_Y = 20;
 
 // const WRAP = false; // TODO
+const ROTATE_AND_FLIP = true;
 
 const SPEED = 1;
 
@@ -12,7 +13,7 @@ const N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_EDGES = false;
-let DRAW_H = false;
+let DRAW_H = true;
 
 let LOOP = true;
 let FORCE_NEXT = false;
@@ -105,6 +106,36 @@ class Pattern {
         }
 
         this.overlaps = [];
+    }
+    rotateOnce() {
+        function rotate90(matrix) {
+            const n = matrix.length;
+            const x = Math.floor(n/ 2);
+            const y = n - 1;
+            for (let i = 0; i < x; i++) {
+                for (let j = i; j < y - i; j++) {
+                    let k = matrix[i][j];
+                    matrix[i][j] = matrix[y - j][i];
+                    matrix[y - j][i] = matrix[y - i][y - j];
+                    matrix[y - i][y - j] = matrix[j][y - i];
+                    matrix[j][y - i] = k;
+                }
+            }
+        }
+        rotate90(this.colors);
+    }
+    rotate(r) {
+        for (let i = 0; i < r; i++) {
+            this.rotateOnce();
+        }
+    }
+    flipX() {
+        for (let x = 0; x < N; x++) {
+            this.colors[x].reverse();
+        }
+    }
+    flipY() {
+        this.colors.reverse();
     }
     matches(other) {
         for (let x = 0; x < N; x++) {
@@ -306,11 +337,23 @@ function swapToSvgAndStart() {
     document.getElementById("mainSvg").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
 
+    let rMax = ROTATE_AND_FLIP ? 6 : 1;
+
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
-            // TODO: pattern rotations/flips
-            const pattern = new Pattern(x, y);
-            patterns.push(pattern);
+
+            for (let r = 0; r < rMax; r++) {
+                const pattern = new Pattern(x, y);
+                if (r < 4) {
+                    pattern.rotate(r);
+                } else if (r == 4) {
+                    pattern.flipX();
+                } else if (r == 5) {
+                    pattern.flipY();
+                }
+                patterns.push(pattern);
+            }
+            
         }
     }
 
