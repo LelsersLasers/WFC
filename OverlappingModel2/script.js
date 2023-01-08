@@ -602,6 +602,7 @@ function keyDownHandle(e) {
             break;
         case "h":
             DRAW_H = !DRAW_H;
+            updateSvg();
             break;
         case "r":
             createGrid();
