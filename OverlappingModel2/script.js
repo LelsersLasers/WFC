@@ -307,10 +307,13 @@ function swapToSvgAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createGrid();
     
-     // mainLoop() calls itself, but with setTimeout(mainLoop, 1)
-    // using setTimeout puts the mainLoop() call at the end of the event queue
-    // allowing the browser to render/update the svg elements before the next call to mainLoop()
-    mainLoop();
+     // mainUpdateLoop() calls itself, but with setTimeout(mainUpdateLoop, 0)
+    // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
+    // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
+
+    if (LOOP || FORCE_NEXT) { // don't always auto start
+        mainUpdateLoop();
+    }
 }
 function createGrid() {
     svg.innerHTML = '';
@@ -492,27 +495,22 @@ function updateSvg() {
     percentDone /= DIMS_X * DIMS_Y * (patterns.length - 1);
     percentDone = parseFloat((percentDone * 100).toFixed(2));
 }
-function mainLoop() {
-    // note: imagine that this function is wrapped in a `while (true)`
-
-    let timeout = 0; // run as fast as possible 
-
-    if (stack.length > 0) { // in the middle of propagating
+function mainUpdateLoop() {
+    if (stack.length > 0) {
         propagate();
     } else if (LOOP || FORCE_NEXT) {
-        iterate();   
-        FORCE_NEXT = false;
-    } else {
-        timeout = 50; // 20 fps is responsive enough when not looping
+        iterate();
     }
-
     updateSvg();
-    
+
     setDelta();
     const fps = parseInt((1000 / delta).toFixed(0));
     console.log({ fps, percentDone, iteration, stack});
 
-    setTimeout(mainLoop, timeout);
+    if (stack.length > 0 || LOOP || FORCE_NEXT) {
+        FORCE_NEXT = false;
+        setTimeout(mainUpdateLoop, 0);
+    }
 }
 //----------------------------------------------------------------------------//
 
@@ -524,21 +522,26 @@ function keyDownHandle(e) {
     switch (e.key.toLowerCase()) {
         case "enter":
             LOOP = !LOOP;
+            if (stack.length == 0 && LOOP) {
+                mainUpdateLoop();
+            }
             break;    
         case " ":
             FORCE_NEXT = true;
+            if (stack.length == 0 && !LOOP) {
+                mainUpdateLoop();
+            }
             break;
         case "escape":
             LOOP = false;
             break;
         case "d":
             DRAW_STATES = !DRAW_STATES;
+            updateSvg();
             break;
         case "e":
             DRAW_EDGES = !DRAW_EDGES;
-
             updateSvg();
-
             break;
         case "h":
             DRAW_H = !DRAW_H;
