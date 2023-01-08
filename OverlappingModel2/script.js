@@ -1,8 +1,9 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-// const WRAP = false; // TODO
-const ROTATE_AND_FLIP = true;
+const WRAP = false; // TODO
+
+const ROTATE_AND_FLIP = false;
 
 const SPEED = 1;
 
@@ -337,10 +338,12 @@ function swapToSvgAndStart() {
     document.getElementById("mainSvg").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
 
-    let rMax = ROTATE_AND_FLIP ? 6 : 1;
+    const rMax = ROTATE_AND_FLIP ? 6 : 1;
+    const wMax = WRAP ? sourceImg.width : sourceImg.width - (N - 1);
+    const hMax = WRAP ? sourceImg.height : sourceImg.height - (N - 1);
 
-    for (let x = 0; x < sourceImg.width; x++) {
-        for (let y = 0; y < sourceImg.height; y++) {
+    for (let x = 0; x < wMax; x++) {
+        for (let y = 0; y < hMax; y++) {
 
             for (let r = 0; r < rMax; r++) {
                 const pattern = new Pattern(x, y);
@@ -480,9 +483,16 @@ function propagate() {
             }
 
             let otherIdx = [
-                (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
-                (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
+                currentIdx[0] + offsetX,
+                currentIdx[1] + offsetY
             ];
+
+            if (WRAP) {
+                otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
+                otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
+            } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
+                continue;
+            }
 
             // use versions without duplicates
             let otherPossiblePatterns = grid[otherIdx[0]][otherIdx[1]].validStates;
