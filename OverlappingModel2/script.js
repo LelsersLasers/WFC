@@ -34,15 +34,13 @@ const TILE_OFFSET_X = Math.floor((svg.getAttribute("width") - ((TILE_SIZE + 1) *
 const TILE_OFFSET_Y = Math.floor((svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2);
 
 let iteration = 0;
+let percentDone = 0;
 
 let sourceImg = new Image();
 
 let patterns = [];
 
 const grid = [];
-
-// const rects = [];
-// const texts = [];
 
 let stack = [];
 //----------------------------------------------------------------------------//
@@ -486,11 +484,15 @@ function iterate() {
 
 //----------------------------------------------------------------------------//
 function updateSvg() {
+    percentDone = DIMS_X * DIMS_Y * (patterns.length - 1);
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x][y].setColor();
+            percentDone -= grid[x][y].validPatterns.length - 1;
         }
     }
+    percentDone /= DIMS_X * DIMS_Y * (patterns.length - 1);
+    percentDone = parseFloat((percentDone * 100).toFixed(2));
 }
 function mainLoop() {
     // imagine that this function is wrapped in a `while (true)`
@@ -508,7 +510,7 @@ function mainLoop() {
     
     setDelta();
     const fps = parseInt((1000 / delta).toFixed(0));
-    console.log({ fps, iteration, stack});
+    console.log({ fps, percentDone, iteration, stack});
 }
 //----------------------------------------------------------------------------//
 
