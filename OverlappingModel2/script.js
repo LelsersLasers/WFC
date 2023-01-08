@@ -2,6 +2,7 @@ const DIMS_X = 20;
 const DIMS_Y = 20;
 
 // const WRAP = false; // TODO
+const FLIPS_AND_ROTATIONS = true;
 
 const SPEED = 1;
 
@@ -12,7 +13,7 @@ const N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_EDGES = false;
-let DRAW_H = false;
+let DRAW_H = true;
 
 let LOOP = true;
 let FORCE_NEXT = false;
@@ -72,15 +73,7 @@ class Overlap {
 }
 
 class Pattern {
-    constructor(offsetX, offsetY) {
-
-        const canv = document.createElement("canvas");
-        canv.width = sourceImg.width;
-        canv.height = sourceImg.height;
-        const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
-
-        ctx.drawImage(sourceImg, 0, 0, sourceImg.width, sourceImg.height);
-
+    constructor(offsetX, offsetY, ctx) {
         this.colors = [];
 
         const flippedCoords = {};
@@ -306,11 +299,41 @@ function swapToSvgAndStart() {
     document.getElementById("mainSvg").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
 
+    const patternsPerSpot = FLIPS_AND_ROTATIONS ? 6 : 1;
+
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
             // TODO: pattern rotations/flips
-            const pattern = new Pattern(x, y);
-            patterns.push(pattern);
+
+            for (let i = 0; i < patternsPerSpot; i++) {
+                const canv = document.createElement("canvas");
+                canv.width = sourceImg.width;
+                canv.height = sourceImg.height;
+                const ctx = getContextFromCanvas(canv, {willReadFrequently: true});
+
+                // i == 0: nothing changes (rotate 0 degrees)
+                if (i == 1) { // rotate 90 degrees
+                    ctx.translate(sourceImg.width, 0);
+                    ctx.rotate(Math.PI / 2);
+                } else if (i == 2) { // rotate 180 degrees
+                    ctx.translate(sourceImg.width, sourceImg.height);
+                    ctx.rotate(Math.PI);
+                } else if (i == 3) { // rotate 270 degrees
+                    ctx.translate(0, sourceImg.height);
+                    ctx.rotate(Math.PI * 3 / 2);
+                } else if (i == 4) { // flip x
+                    ctx.translate(sourceImg.width, 0);
+                    ctx.scale(-1, 1);
+                } else if (i == 5) { // flip y
+                    ctx.translate(0, sourceImg.height);
+                    ctx.scale(1, -1);
+                }
+
+                ctx.drawImage(sourceImg, 0, 0, sourceImg.width, sourceImg.height);
+
+                const pattern = new Pattern(x, y, ctx);
+                patterns.push(pattern);
+            }
         }
     }
 
