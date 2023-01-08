@@ -8,7 +8,6 @@ Takes 1 input image.
 - Space: collapse 1 cell and propagate
 - Escape: stop auto progress
 - D: toggle drawing valid states of non-collapsed cells
-- O: toggle drawing outline boarder of valid tile spots (doesn't work)
 - E: toggle drawing outline around grid tiles
 - H: toggle drawing entropy
 - R: reset grid
@@ -18,7 +17,6 @@ Takes 1 input image.
 - "Throttling" when not propagating?
     - Right now: 100%s a CPU core thread
         - While propagating and while not propagating
-- Fix outline (run time option)
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost

@@ -11,7 +11,6 @@ const N = 3;
 
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
-let DRAW_OUTLINE = true; // TODO
 let DRAW_EDGES = false;
 let DRAW_H = false;
 
@@ -531,9 +530,6 @@ function keyDownHandle(e) {
             break;
         case "d":
             DRAW_STATES = !DRAW_STATES;
-            break;
-        case "o":
-            DRAW_OUTLINE = !DRAW_OUTLINE;
             break;
         case "e":
             DRAW_EDGES = !DRAW_EDGES;
