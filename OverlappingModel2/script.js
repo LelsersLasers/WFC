@@ -307,11 +307,10 @@ function swapToSvgAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createGrid();
     
-    // run main loop (1 propagation + 1 updateSvg) as fast as possible
-    // the next interval proc/tick will not start until the previous one is done
-    // inbetween the ticks, changes to the browser window elements (including the svg) take effect
-    // (this is just the way browser JS works)
-    setInterval(mainLoop, 1);
+     // mainLoop() calls itself, but with setTimeout(mainLoop, 1)
+    // using setTimeout puts the mainLoop() call at the end of the event queue
+    // allowing the browser to render/update the svg elements before the next call to mainLoop()
+    mainLoop();
 }
 function createGrid() {
     svg.innerHTML = '';
@@ -494,15 +493,17 @@ function updateSvg() {
     percentDone = parseFloat((percentDone * 100).toFixed(2));
 }
 function mainLoop() {
-    // imagine that this function is wrapped in a `while (true)`
+    // note: imagine that this function is wrapped in a `while (true)`
+
+    let timeout = 0; // run as fast as possible 
 
     if (stack.length > 0) { // in the middle of propagating
         propagate();
+    } else if (LOOP || FORCE_NEXT) {
+        iterate();   
+        FORCE_NEXT = false;
     } else {
-        if (LOOP || FORCE_NEXT) {
-            iterate();   
-            FORCE_NEXT = false;
-        }
+        timeout = 50; // 20 fps is responsive enough when not looping
     }
 
     updateSvg();
@@ -510,6 +511,8 @@ function mainLoop() {
     setDelta();
     const fps = parseInt((1000 / delta).toFixed(0));
     console.log({ fps, percentDone, iteration, stack});
+
+    setTimeout(mainLoop, timeout);
 }
 //----------------------------------------------------------------------------//
 

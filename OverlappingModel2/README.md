@@ -15,8 +15,9 @@ Takes 1 input image.
 ## Todo?
 
 - "Throttling" when not propagating?
-    - Right now: 100%s a CPU core thread
-        - While propagating and while not propagating
+    - Use the events
+        - Run main loop while propagating
+        - Otherwise react to key events
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
