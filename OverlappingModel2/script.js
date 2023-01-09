@@ -88,13 +88,8 @@ class Pattern {
 
         this.colors = [];
 
-        const flippedCoords = {};
-        for (let i = 0; i < N; i++) {
-            this.colors.push([]);
-            flippedCoords[i] = N - i - 1;
-        }
-
         for (let x = 0; x < N; x++) {
+            this.colors.push([]);
             for (let y = 0; y < N; y++) {
 
                 let spotX = x + offsetX;
@@ -112,8 +107,7 @@ class Pattern {
                     color = new Color(pixel[0], pixel[1], pixel[2]);
                 }
 
-                const flippedY = flippedCoords[y];
-                this.colors[x][flippedY] = color;
+                this.colors[x][y] = color;
             }
         }
 
@@ -187,8 +181,8 @@ class Pattern {
                     for (let patternX = 0; patternX < N; patternX++) {
                         for (let patternY = 0; patternY < N; patternY++) {
 
-                            const otherPatternX = patternX + offsetX;
-                            const otherPatternY = patternY + offsetY;
+                            const otherPatternX = patternX - offsetX;
+                            const otherPatternY = patternY - offsetY;
 
                             // only check valid spots (overlap will only be complete of offsets = 0)
                             if (otherPatternX < 0 || otherPatternX >= N || otherPatternY < 0 || otherPatternY >= N) {
