@@ -1,7 +1,9 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-const WRAP = false; // TODO
+const WRAP_PATTERN = false;
+const WRAP_OUTPUT = false;
+
 
 const ROTATE_AND_FLIP = false;
 
@@ -339,8 +341,8 @@ function swapToSvgAndStart() {
     document.getElementById("fileInput").setAttribute("hidden", "");
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
-    const wMax = WRAP ? sourceImg.width : sourceImg.width - (N - 1);
-    const hMax = WRAP ? sourceImg.height : sourceImg.height - (N - 1);
+    const wMax = WRAP_PATTERN ? sourceImg.width : sourceImg.width - (N - 1);
+    const hMax = WRAP_PATTERN ? sourceImg.height : sourceImg.height - (N - 1);
 
     for (let x = 0; x < wMax; x++) {
         for (let y = 0; y < hMax; y++) {
@@ -487,7 +489,7 @@ function propagate() {
                 currentIdx[1] + offsetY
             ];
 
-            if (WRAP) {
+            if (WRAP_OUTPUT) {
                 otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
                 otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
             } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
