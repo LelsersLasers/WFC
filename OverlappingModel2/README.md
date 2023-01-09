@@ -18,9 +18,6 @@ Takes 1 input image.
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
         - Likely all my "some" iteration
-- Optional WRAP
-- Optional ceiling/floor pixels
-    - To better "replicate" the input image
 - Improve UI
     - Maybe make it like the 3d cellular automata
         - https://lelserslasers.itch.io/3d-cellular-automata-wgpu-rust

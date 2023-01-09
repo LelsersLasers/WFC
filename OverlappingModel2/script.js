@@ -7,6 +7,8 @@ const WRAP_OUTPUT = false;
 const ROTATE_AND_FLIP = false;
 
 const FLOOR = 1;
+const CEILING = 1;
+const SIDE = 1;
 
 const SPEED = 1;
 
@@ -119,6 +121,9 @@ class Pattern {
         this.srcY = offsetY;
 
         this.floor = sourceImg.height - offsetY;
+        this.ceiling = offsetY + 1;
+        this.left = offsetX + 1;
+        this.right = sourceImg.width - offsetX;
     }
     rotateOnce() {
         function rotate90(matrix) {
@@ -251,6 +256,9 @@ class GridSpot {
         }
 
         this.floor = DIMS_Y - y;
+        this.ceiling = y + 1;
+        this.left = x + 1;
+        this.right = DIMS_X - x;
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -385,7 +393,7 @@ function swapToSvgAndStart() {
     // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
     // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
 
-    // stack could already have things in it depending on FLOOR
+    // stack could already have things in it depending on FLOOR/CEILING/SIDE
     if (LOOP || FORCE_NEXT || stack.length > 0) {
         mainUpdateLoop();
     }
@@ -410,6 +418,30 @@ function createGrid() {
                 gs.updateValidPatterns();
 
                 stack.push([x, y]);
+            }
+            if (gs.ceiling <= CEILING) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.ceiling == gs.ceiling);
+                gs.updateValidPatterns();
+
+                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
+                    stack.push([x, y]);
+                }
+            }
+            if (gs.left <= SIDE) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.left == gs.left);
+                gs.updateValidPatterns();
+
+                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
+                    stack.push([x, y]);
+                }
+            }
+            if (gs.right <= SIDE) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.right == gs.right);
+                gs.updateValidPatterns();
+
+                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
+                    stack.push([x, y]);
+                }
             }
         }
     }
