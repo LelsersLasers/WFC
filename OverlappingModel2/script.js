@@ -4,8 +4,9 @@ const DIMS_Y = 20;
 const WRAP_PATTERN = false;
 const WRAP_OUTPUT = false;
 
-
 const ROTATE_AND_FLIP = false;
+
+const FLOOR = 1;
 
 const SPEED = 1;
 
@@ -18,7 +19,7 @@ let DRAW_STATES = true;
 let DRAW_EDGES = false;
 let DRAW_H = true;
 
-let LOOP = true;
+let LOOP = false;
 let FORCE_NEXT = false;
 //----------------------------------------------------------------------------//
 
@@ -57,7 +58,7 @@ class Color {
         this.b = b;
     }
     matches(other) {
-        return this.r === other.r && this.g === other.g && this.b === other.b && this.a === other.a;
+        return this.r === other.r && this.g === other.g && this.b === other.b;
     }
     toRgb() {
         return `rgb(${this.r}, ${this.g}, ${this.b})`;
@@ -95,20 +96,35 @@ class Pattern {
 
         for (let x = 0; x < N; x++) {
             for (let y = 0; y < N; y++) {
-                const spotX = (x + offsetX + sourceImg.width) % sourceImg.width;
-                const spotY = (y + offsetY + sourceImg.height) % sourceImg.height;
-                
-                const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
-                
-                const color = new Color(pixel[0], pixel[1], pixel[2]);
+
+                let spotX = x + offsetX;
+                let spotY = y + offsetY;
+
+                if (WRAP_PATTERN) {
+                    spotX = (spotX + sourceImg.width) % sourceImg.width;
+                    spotY = (spotY + sourceImg.height) % sourceImg.height;
+                }
+
+                let color = new Color(-1, -1, -1);
+
+                if (spotX >= 0 && spotX < sourceImg.width && spotY >= 0 && spotY < sourceImg.height) {                
+                    const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
+                    color = new Color(pixel[0], pixel[1], pixel[2]);
+                }
 
                 const flippedY = flippedCoords[y];
-
                 this.colors[x][flippedY] = color;
             }
         }
 
         this.overlaps = [];
+
+        this.r = 0;
+
+        this.srcX = offsetX;
+        this.srcY = offsetY;
+
+        this.floor = sourceImg.height - offsetY;
     }
     rotateOnce() {
         function rotate90(matrix) {
@@ -131,14 +147,17 @@ class Pattern {
         for (let i = 0; i < r; i++) {
             this.rotateOnce();
         }
+        this.r = r;
     }
     flipX() {
         for (let x = 0; x < N; x++) {
             this.colors[x].reverse();
         }
+        this.r = 4;
     }
     flipY() {
         this.colors.reverse();
+        this.r = 5;
     }
     matches(other) {
         for (let x = 0; x < N; x++) {
@@ -236,6 +255,8 @@ class GridSpot {
                 this.validStates.push(pattern);
             }
         }
+
+        this.floor = DIMS_Y - y;
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -341,11 +362,11 @@ function swapToSvgAndStart() {
     document.getElementById("fileInput").setAttribute("hidden", "");
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
-    const wMax = WRAP_PATTERN ? sourceImg.width : sourceImg.width - (N - 1);
-    const hMax = WRAP_PATTERN ? sourceImg.height : sourceImg.height - (N - 1);
+    // const wMax = WRAP_PATTERN ? sourceImg.width : sourceImg.width - (N - 1);
+    // const hMax = WRAP_PATTERN ? sourceImg.height : sourceImg.height - (N - 1);
 
-    for (let x = 0; x < wMax; x++) {
-        for (let y = 0; y < hMax; y++) {
+    for (let x = 0; x < sourceImg.width; x++) {
+        for (let y = 0; y < sourceImg.height; y++) {
 
             for (let r = 0; r < rMax; r++) {
                 const pattern = new Pattern(x, y);
@@ -368,7 +389,7 @@ function swapToSvgAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createGrid();
     
-     // mainUpdateLoop() calls itself, but with setTimeout(mainUpdateLoop, 0)
+    // mainUpdateLoop() calls itself, but with setTimeout(mainUpdateLoop, 0)
     // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
     // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
 
@@ -387,6 +408,32 @@ function createGrid() {
             grid[x].push(new GridSpot(x, y));
         }
     }
+
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            
+            const gs = grid[x][y];
+            if (gs.floor <= FLOOR) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.floor == gs.floor);
+                gs.updateValidPatterns();
+            }
+
+            // if (gs.floor <= FLOOR) {
+
+            //     const gs2 = grid[x][y - (N - 1)];
+
+            //     gs2.validStates = gs2.validStates.filter((pattern) => pattern.floor == gs2.floor);
+            //     console.log(gs2.validStates.length, gs2.floor);
+
+            //     gs2.updateValidPatterns();
+            // }
+
+        }
+    }
+
+    let a = patterns.slice();
+    a.sort((a, b) => a.floor - b.floor);
+    console.log(a);
 
     updateSvg();
 
