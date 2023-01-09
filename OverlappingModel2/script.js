@@ -1,8 +1,14 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-// const WRAP = false; // TODO
-const ROTATE_AND_FLIP = true;
+const WRAP_PATTERN = false;
+const WRAP_OUTPUT = false;
+
+const ROTATE_AND_FLIP = false;
+
+const FLOOR = 1;
+const CEILING = 1;
+const SIDE = 1;
 
 const SPEED = 1;
 
@@ -15,7 +21,7 @@ let DRAW_STATES = true;
 let DRAW_EDGES = false;
 let DRAW_H = true;
 
-let LOOP = true;
+let LOOP = false;
 let FORCE_NEXT = false;
 //----------------------------------------------------------------------------//
 
@@ -54,7 +60,7 @@ class Color {
         this.b = b;
     }
     matches(other) {
-        return this.r === other.r && this.g === other.g && this.b === other.b && this.a === other.a;
+        return this.r === other.r && this.g === other.g && this.b === other.b;
     }
     toRgb() {
         return `rgb(${this.r}, ${this.g}, ${this.b})`;
@@ -84,28 +90,40 @@ class Pattern {
 
         this.colors = [];
 
-        const flippedCoords = {};
-        for (let i = 0; i < N; i++) {
-            this.colors.push([]);
-            flippedCoords[i] = N - i - 1;
-        }
-
         for (let x = 0; x < N; x++) {
+            this.colors.push([]);
             for (let y = 0; y < N; y++) {
-                const spotX = (x + offsetX + sourceImg.width) % sourceImg.width;
-                const spotY = (y + offsetY + sourceImg.height) % sourceImg.height;
-                
-                const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
-                
-                const color = new Color(pixel[0], pixel[1], pixel[2]);
 
-                const flippedY = flippedCoords[y];
+                let spotX = x + offsetX;
+                let spotY = y + offsetY;
 
-                this.colors[x][flippedY] = color;
+                if (WRAP_PATTERN) {
+                    spotX = (spotX + sourceImg.width) % sourceImg.width;
+                    spotY = (spotY + sourceImg.height) % sourceImg.height;
+                }
+
+                let color = new Color(-1, -1, -1);
+
+                if (spotX >= 0 && spotX < sourceImg.width && spotY >= 0 && spotY < sourceImg.height) {                
+                    const pixel = ctx.getImageData(spotX, spotY, 1, 1).data;
+                    color = new Color(pixel[0], pixel[1], pixel[2]);
+                }
+
+                this.colors[x][y] = color;
             }
         }
 
         this.overlaps = [];
+
+        this.r = 0;
+
+        this.srcX = offsetX;
+        this.srcY = offsetY;
+
+        this.floor = sourceImg.height - offsetY;
+        this.ceiling = offsetY + 1;
+        this.left = offsetX + 1;
+        this.right = sourceImg.width - offsetX;
     }
     rotateOnce() {
         function rotate90(matrix) {
@@ -128,14 +146,17 @@ class Pattern {
         for (let i = 0; i < r; i++) {
             this.rotateOnce();
         }
+        this.r = r;
     }
     flipX() {
         for (let x = 0; x < N; x++) {
             this.colors[x].reverse();
         }
+        this.r = 4;
     }
     flipY() {
         this.colors.reverse();
+        this.r = 5;
     }
     matches(other) {
         for (let x = 0; x < N; x++) {
@@ -165,8 +186,8 @@ class Pattern {
                     for (let patternX = 0; patternX < N; patternX++) {
                         for (let patternY = 0; patternY < N; patternY++) {
 
-                            const otherPatternX = patternX + offsetX;
-                            const otherPatternY = patternY + offsetY;
+                            const otherPatternX = patternX - offsetX;
+                            const otherPatternY = patternY - offsetY;
 
                             // only check valid spots (overlap will only be complete of offsets = 0)
                             if (otherPatternX < 0 || otherPatternX >= N || otherPatternY < 0 || otherPatternY >= N) {
@@ -233,6 +254,11 @@ class GridSpot {
                 this.validStates.push(pattern);
             }
         }
+
+        this.floor = DIMS_Y - y;
+        this.ceiling = y + 1;
+        this.left = x + 1;
+        this.right = DIMS_X - x;
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -337,7 +363,7 @@ function swapToSvgAndStart() {
     document.getElementById("mainSvg").removeAttribute("hidden");
     document.getElementById("fileInput").setAttribute("hidden", "");
 
-    let rMax = ROTATE_AND_FLIP ? 6 : 1;
+    const rMax = ROTATE_AND_FLIP ? 6 : 1;
 
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
@@ -363,11 +389,12 @@ function swapToSvgAndStart() {
     // create the grids that hold the states of patterns per pixel and their entropies
     createGrid();
     
-     // mainUpdateLoop() calls itself, but with setTimeout(mainUpdateLoop, 0)
+    // mainUpdateLoop() calls itself, but with setTimeout(mainUpdateLoop, 0)
     // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
     // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
 
-    if (LOOP || FORCE_NEXT) { // don't always auto start
+    // stack could already have things in it depending on FLOOR/CEILING/SIDE
+    if (LOOP || FORCE_NEXT || stack.length > 0) {
         mainUpdateLoop();
     }
 }
@@ -380,6 +407,42 @@ function createGrid() {
         grid.push([]);
         for (let y = 0; y < DIMS_Y; y++) {
             grid[x].push(new GridSpot(x, y));
+        }
+    }
+
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            const gs = grid[x][y];
+            if (gs.floor <= FLOOR) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.floor == gs.floor);
+                gs.updateValidPatterns();
+
+                stack.push([x, y]);
+            }
+            if (gs.ceiling <= CEILING) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.ceiling == gs.ceiling);
+                gs.updateValidPatterns();
+
+                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
+                    stack.push([x, y]);
+                }
+            }
+            if (gs.left <= SIDE) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.left == gs.left);
+                gs.updateValidPatterns();
+
+                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
+                    stack.push([x, y]);
+                }
+            }
+            if (gs.right <= SIDE) {
+                gs.validStates = gs.validStates.filter((pattern) => pattern.right == gs.right);
+                gs.updateValidPatterns();
+
+                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
+                    stack.push([x, y]);
+                }
+            }
         }
     }
 
@@ -480,9 +543,16 @@ function propagate() {
             }
 
             let otherIdx = [
-                (currentIdx[0] + offsetX + DIMS_X) % DIMS_X,
-                (currentIdx[1] + offsetY + DIMS_Y) % DIMS_Y
+                currentIdx[0] + offsetX,
+                currentIdx[1] + offsetY
             ];
+
+            if (WRAP_OUTPUT) {
+                otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
+                otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
+            } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
+                continue;
+            }
 
             // use versions without duplicates
             let otherPossiblePatterns = grid[otherIdx[0]][otherIdx[1]].validStates;
