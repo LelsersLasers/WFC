@@ -356,8 +356,6 @@ function swapToSvgAndStart() {
     document.getElementById("fileInput").setAttribute("hidden", "");
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
-    // const wMax = WRAP_PATTERN ? sourceImg.width : sourceImg.width - (N - 1);
-    // const hMax = WRAP_PATTERN ? sourceImg.height : sourceImg.height - (N - 1);
 
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
@@ -387,7 +385,8 @@ function swapToSvgAndStart() {
     // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
     // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
 
-    if (LOOP || FORCE_NEXT) { // don't always auto start
+    // stack could already have things in it depending on FLOOR
+    if (LOOP || FORCE_NEXT || stack.length > 0) {
         mainUpdateLoop();
     }
 }
@@ -405,29 +404,15 @@ function createGrid() {
 
     for (let x = 0; x < DIMS_X; x++) {
         for (let y = 0; y < DIMS_Y; y++) {
-            
             const gs = grid[x][y];
             if (gs.floor <= FLOOR) {
                 gs.validStates = gs.validStates.filter((pattern) => pattern.floor == gs.floor);
                 gs.updateValidPatterns();
+
+                stack.push([x, y]);
             }
-
-            // if (gs.floor <= FLOOR) {
-
-            //     const gs2 = grid[x][y - (N - 1)];
-
-            //     gs2.validStates = gs2.validStates.filter((pattern) => pattern.floor == gs2.floor);
-            //     console.log(gs2.validStates.length, gs2.floor);
-
-            //     gs2.updateValidPatterns();
-            // }
-
         }
     }
-
-    let a = patterns.slice();
-    a.sort((a, b) => a.floor - b.floor);
-    console.log(a);
 
     updateSvg();
 
