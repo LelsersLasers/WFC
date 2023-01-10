@@ -1,8 +1,7 @@
 const DIMS_X = 20;
 const DIMS_Y = 20;
 
-const WRAP_PATTERN = false;
-const WRAP_OUTPUT = false;
+const WRAP = false;
 
 const ROTATE_AND_FLIP = false;
 
@@ -94,7 +93,7 @@ class Pattern {
                 let spotX = x + offsetX;
                 let spotY = y + offsetY;
 
-                if (WRAP_PATTERN) {
+                if (WRAP) {
                     spotX = (spotX + sourceImg.width) % sourceImg.width;
                     spotY = (spotY + sourceImg.height) % sourceImg.height;
                 }
@@ -551,7 +550,7 @@ function propagate() {
                 currentIdx[1] + offsetY
             ];
 
-            if (WRAP_OUTPUT) {
+            if (WRAP) {
                 otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
                 otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
             } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
