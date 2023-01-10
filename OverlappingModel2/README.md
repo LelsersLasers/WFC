@@ -27,7 +27,7 @@ Takes 1 input image.
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
         - Likely all my "some" iteration
-- Improve UI
+- UI
     - Maybe make it like the 3d cellular automata
         - https://lelserslasers.itch.io/3d-cellular-automata-wgpu-rust
         - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML

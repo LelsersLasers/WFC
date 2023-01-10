@@ -1,13 +1,13 @@
-const DIMS_X = 20;
+const DIMS_X = 30;
 const DIMS_Y = 20;
 
 const WRAP = false;
 
 const ROTATE_AND_FLIP = false;
 
-const FLOOR = 2;
-const CEILING = 2;
-const SIDE = 2;
+const FLOOR = 1;
+const CEILING = 1;
+const SIDE = 1;
 
 const N = 3;
 //----------------------------------------------------------------------------//
@@ -31,9 +31,9 @@ setupSvg();
 let delta = 1/60;
 let lastTime = performance.now();
 
-const TILE_SIZE = Math.floor(calcTileSize());
-const TILE_OFFSET_X = Math.floor((svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2);
-const TILE_OFFSET_Y = Math.floor((svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2);
+const TILE_SIZE = calcTileSize();
+const TILE_OFFSET_X = (svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2;
+const TILE_OFFSET_Y = (svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2;
 
 let iteration = 0;
 let percentDone = 0;
@@ -372,22 +372,22 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 
 
 //----------------------------------------------------------------------------//
+function resize() {
+    const maxWidth = (window.innerWidth) * 0.75;
+    const maxHeight = window.innerHeight - 32;
+
+    const width = Math.min(maxWidth, (maxHeight * DIMS_X) / DIMS_Y);
+    const height = Math.min(maxHeight, (maxWidth * DIMS_Y) / DIMS_X);
+
+    svg.setAttribute("width", width);
+    svg.setAttribute("height", height);
+}
 function setupSvg() {
-    console.log("Window is " + window.innerWidth +" by " + window.innerHeight);
+    resize();
 
-    const maxW = window.innerWidth - 20;
-    const maxH = window.innerHeight - 20;
-
-    svg.setAttribute("width", maxW);
-    svg.setAttribute("height", maxH);
-
-    svg.setAttribute("viewBox", "0 0 " + maxW + " " + maxH);
-    
-    return svg;
+    svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
 }
 function swapToSvgAndStart() {
-    document.getElementById("mainSvg").removeAttribute("hidden");
-    document.getElementById("fileInput").setAttribute("hidden", "");
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
 
@@ -484,8 +484,8 @@ function getContextFromCanvas(canv, options = {}) {
 }
 function calcTileSize() {
     // Calculate the tile size
-    const tileW = svg.getAttribute("width") / DIMS_X;
-    const tileH = svg.getAttribute("height") / DIMS_Y;
+    const tileW = (svg.getAttribute("width") - 20) / DIMS_X;
+    const tileH = (svg.getAttribute("height") - 20) / DIMS_Y;
     const tileSize = Math.min(tileW, tileH) - 1;
 
     return tileSize;
