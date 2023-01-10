@@ -21,7 +21,7 @@ let DRAW_STATES = true;
 let DRAW_EDGES = false;
 let DRAW_H = true;
 
-let LOOP = false;
+let LOOP = true;
 let FORCE_NEXT = false;
 //----------------------------------------------------------------------------//
 
@@ -393,8 +393,7 @@ function swapToSvgAndStart() {
     // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
     // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
 
-    // stack could already have things in it depending on FLOOR/CEILING/SIDE
-    if (LOOP || FORCE_NEXT || stack.length > 0) {
+    if (LOOP || FORCE_NEXT) {
         mainUpdateLoop();
     }
 }
@@ -623,19 +622,23 @@ function updateSvg() {
     percentDone = parseFloat((percentDone * 100).toFixed(2));
 }
 function mainUpdateLoop() {
-    if (stack.length > 0) {
-        propagate();
-    } else if (LOOP || FORCE_NEXT) {
-        iterate();
+
+    if (LOOP || FORCE_NEXT) {
+        if (stack.length > 0) {
+            propagate();
+        } else {
+            iterate();
+        }
+        FORCE_NEXT = false;
     }
+
     updateSvg();
 
     setDelta();
     const fps = parseInt((1000 / delta).toFixed(0));
     console.log({ fps, percentDone, iteration, stack});
 
-    if (stack.length > 0 || LOOP || FORCE_NEXT) {
-        FORCE_NEXT = false;
+    if (LOOP) {
         setTimeout(mainUpdateLoop, 0);
     }
 }
@@ -649,15 +652,13 @@ function keyDownHandle(e) {
     switch (e.key.toLowerCase()) {
         case "enter":
             LOOP = !LOOP;
-            if (stack.length == 0 && LOOP) {
+            if (LOOP) {
                 mainUpdateLoop();
             }
             break;    
         case " ":
             FORCE_NEXT = true;
-            if (stack.length == 0 && !LOOP) {
-                mainUpdateLoop();
-            }
+            mainUpdateLoop();
             break;
         case "escape":
             LOOP = false;

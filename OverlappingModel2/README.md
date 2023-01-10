@@ -14,6 +14,16 @@ Takes 1 input image.
 
 ## Todo?
 
+- Final touches
+    - Wrap edge cases
+        - Is wrapping working correctly?
+        - If WRAP == true: FLOOR/CEILING/SIDE => 0
+        - If FLOOR/CEILING/SIDE >= 0: ROTATE/FLIP = false; 
+        - How Color(-1, -1, -1) interacts?
+        - Top edge vs bottom edge (left vs right)
+            - Acts differently
+    - User proof
+        - Make sure keybinds before starting don't break anything
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
@@ -25,6 +35,7 @@ Takes 1 input image.
     - And a start menu for non "run time" options
         - Wrap, N, upload picture there, dims, which flips/rotations to use, ceiling/floor pixels, etc
         - Like wordle single player create game page
+    - Resizing
 - Clean?
     - Use the GridSpot class a bit better?
 ## Resources
