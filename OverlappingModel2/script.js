@@ -5,9 +5,9 @@ const WRAP = false;
 
 const ROTATE_AND_FLIP = false;
 
-const FLOOR = 1;
-const CEILING = 1;
-const SIDE = 1;
+const FLOOR = 2;
+const CEILING = 2;
+const SIDE = 2;
 
 const N = 3;
 //----------------------------------------------------------------------------//
@@ -18,7 +18,7 @@ let DRAW_STATES = true;
 let DRAW_EDGES = false;
 let DRAW_H = true;
 
-let LOOP = true;
+let LOOP = false;
 //----------------------------------------------------------------------------//
 
 
@@ -250,12 +250,7 @@ class GridSpot {
 
         this.validPatterns = patterns.slice(); // all possible patterns
 
-        this.validStates = []; // no duplicates
-        for (const pattern of this.validPatterns) {
-            if (!this.validStates.some(p => p.matches(pattern))) {
-                this.validStates.push(pattern);
-            }
-        }
+        this.validStates = []; // no duplicates version
 
         this.floor = DIMS_Y - y;
         this.ceiling = y + 1;
@@ -272,6 +267,14 @@ class GridSpot {
             this.validPatterns = [this.validStates[0]];
         } else {
             this.validPatterns = this.validPatterns.filter((pattern) => this.validStates.some((p) => p.matches(pattern)));
+        }
+    }
+    generateValidStates() {
+        this.validStates = [];
+        for (const pattern of this.validPatterns) {
+            if (!this.validStates.some(p => p.matches(pattern))) {
+                this.validStates.push(pattern);
+            }
         }
     }
     setColor() {
@@ -418,35 +421,38 @@ function createGrid() {
         for (let y = 0; y < DIMS_Y; y++) {
             const gs = grid[x][y];
             if (gs.floor <= FLOOR) {
-                gs.validStates = gs.validStates.filter((pattern) => pattern.floor == gs.floor);
-                gs.updateValidPatterns();
+                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.floor == gs.floor);
 
                 stack.push([x, y]);
             }
             if (gs.ceiling <= CEILING) {
-                gs.validStates = gs.validStates.filter((pattern) => pattern.ceiling == gs.ceiling);
-                gs.updateValidPatterns();
+                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.ceiling == gs.ceiling);
 
                 if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
                     stack.push([x, y]);
                 }
             }
             if (gs.left <= SIDE) {
-                gs.validStates = gs.validStates.filter((pattern) => pattern.left == gs.left);
-                gs.updateValidPatterns();
+                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.left == gs.left);
 
                 if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
                     stack.push([x, y]);
                 }
             }
             if (gs.right <= SIDE) {
-                gs.validStates = gs.validStates.filter((pattern) => pattern.right == gs.right);
-                gs.updateValidPatterns();
+                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.right == gs.right);
 
                 if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
                     stack.push([x, y]);
                 }
             }
+        }
+    }
+
+    for (let x = 0; x < DIMS_X; x++) {
+        for (let y = 0; y < DIMS_Y; y++) {
+            const gs = grid[x][y];
+            gs.generateValidStates();
         }
     }
 
