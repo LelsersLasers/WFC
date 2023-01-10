@@ -10,8 +10,6 @@ const FLOOR = 1;
 const CEILING = 1;
 const SIDE = 1;
 
-const SPEED = 1;
-
 const N = 3;
 //----------------------------------------------------------------------------//
 
@@ -22,7 +20,6 @@ let DRAW_EDGES = false;
 let DRAW_H = true;
 
 let LOOP = true;
-let FORCE_NEXT = false;
 //----------------------------------------------------------------------------//
 
 
@@ -393,7 +390,7 @@ function swapToSvgAndStart() {
     // using setTimeout puts the mainUpdateLoop() call at the end of the event queue
     // allowing the browser to render/update the svg elements before the next call to mainUpdateLoop()
 
-    if (LOOP || FORCE_NEXT) {
+    if (LOOP) {
         mainUpdateLoop();
     }
 }
@@ -524,7 +521,6 @@ function findLowestEntropySpots() {
 
     if (fullyCollapsed) {
         LOOP = false;
-        FORCE_NEXT = false;
         console.log("Fully collapsed!");
         return null;
     } else {
@@ -623,13 +619,10 @@ function updateSvg() {
 }
 function mainUpdateLoop() {
 
-    if (LOOP || FORCE_NEXT) {
-        if (stack.length > 0) {
-            propagate();
-        } else {
-            iterate();
-        }
-        FORCE_NEXT = false;
+    if (stack.length > 0) {
+        propagate();
+    } else {
+        iterate();
     }
 
     updateSvg();
@@ -657,8 +650,9 @@ function keyDownHandle(e) {
             }
             break;    
         case " ":
-            FORCE_NEXT = true;
-            mainUpdateLoop();
+            if (!LOOP) {
+                mainUpdateLoop();
+            }
             break;
         case "escape":
             LOOP = false;

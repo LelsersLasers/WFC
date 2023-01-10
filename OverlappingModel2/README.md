@@ -38,6 +38,7 @@ Takes 1 input image.
     - Resizing
 - Clean?
     - Use the GridSpot class a bit better?
+    - async properly on image load
 ## Resources
 
 - https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983
