@@ -212,6 +212,7 @@ class Pattern {
 }
 class GridSpot {
     constructor(x, y) {
+        //--------------------------------------------------------------------//
         this.rect = document.createElementNS(svgns, "rect");
 
         this.rect.setAttribute("x", TILE_OFFSET_X + x * (TILE_SIZE + 1));
@@ -225,8 +226,9 @@ class GridSpot {
         this.rect.id = toId(x, y);
 
         svg.appendChild(this.rect);
+        //--------------------------------------------------------------------//
 
-
+        //--------------------------------------------------------------------//
         this.text = document.createElementNS(svgns, "text");
 
         this.text.setAttribute("x", TILE_OFFSET_X + (x + 0.5) * (TILE_SIZE + 1));
@@ -243,19 +245,45 @@ class GridSpot {
         this.text.innerHTML = "";
 
         svg.appendChild(this.text);
+        //--------------------------------------------------------------------//
 
-
-        this.x = x;
-        this.y = y;
-
-        this.validPatterns = patterns.slice(); // all possible patterns
-
-        this.validStates = []; // no duplicates version
-
+        //--------------------------------------------------------------------//
         this.floor = DIMS_Y - y;
         this.ceiling = y + 1;
         this.left = x + 1;
         this.right = DIMS_X - x;
+        //--------------------------------------------------------------------//
+
+        //--------------------------------------------------------------------//
+        this.validPatterns = patterns.slice(); // all possible patterns
+
+        if (this.floor <= FLOOR) {
+            this.validPatterns = this.validPatterns.filter((pattern) => pattern.floor == this.floor);
+            addToStack([x, y]);
+        }
+        if (this.ceiling <= CEILING) {
+            this.validPatterns = this.validPatterns.filter((pattern) => pattern.ceiling == this.ceiling);
+            addToStack([x, y]);
+        }
+        if (this.left <= SIDE) {
+            this.validPatterns = this.validPatterns.filter((pattern) => pattern.left == this.left);
+            addToStack([x, y]);
+        }
+        if (this.right <= SIDE) {
+            this.validPatterns = this.validPatterns.filter((pattern) => pattern.right == this.right);
+            addToStack([x, y]);
+        }
+        //--------------------------------------------------------------------//
+
+        //--------------------------------------------------------------------//
+        // do this after filtering validPatterns
+        this.validStates = []; // validPatterns but no duplicate pattern color data
+        for (const pattern of this.validPatterns) {
+            if (!this.validStates.some(p => p.matches(pattern))) {
+                this.validStates.push(pattern);
+            }
+        }
+        //--------------------------------------------------------------------//
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -267,14 +295,6 @@ class GridSpot {
             this.validPatterns = [this.validStates[0]];
         } else {
             this.validPatterns = this.validPatterns.filter((pattern) => this.validStates.some((p) => p.matches(pattern)));
-        }
-    }
-    generateValidStates() {
-        this.validStates = [];
-        for (const pattern of this.validPatterns) {
-            if (!this.validStates.some(p => p.matches(pattern))) {
-                this.validStates.push(pattern);
-            }
         }
     }
     setColor() {
@@ -417,45 +437,6 @@ function createGrid() {
         }
     }
 
-    for (let x = 0; x < DIMS_X; x++) {
-        for (let y = 0; y < DIMS_Y; y++) {
-            const gs = grid[x][y];
-            if (gs.floor <= FLOOR) {
-                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.floor == gs.floor);
-
-                stack.push([x, y]);
-            }
-            if (gs.ceiling <= CEILING) {
-                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.ceiling == gs.ceiling);
-
-                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
-                    stack.push([x, y]);
-                }
-            }
-            if (gs.left <= SIDE) {
-                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.left == gs.left);
-
-                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
-                    stack.push([x, y]);
-                }
-            }
-            if (gs.right <= SIDE) {
-                gs.validPatterns = gs.validPatterns.filter((pattern) => pattern.right == gs.right);
-
-                if (!stack.some(idx => idx[0] == x && idx[1] == y)) {
-                    stack.push([x, y]);
-                }
-            }
-        }
-    }
-
-    for (let x = 0; x < DIMS_X; x++) {
-        for (let y = 0; y < DIMS_Y; y++) {
-            const gs = grid[x][y];
-            gs.generateValidStates();
-        }
-    }
-
     updateSvg();
 
     iteration = 0;
@@ -591,9 +572,7 @@ function propagate() {
                 let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
                 // if there are no overlaps that match the pattern, remove it
                 if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
-                    
-                    // remove 1 element, starting from index i
-                    otherPossiblePatterns.splice(i, 1);
+                    otherPossiblePatterns.splice(i, 1); // remove 1 element, starting from index i
                     grid[otherIdx[0]][otherIdx[1]].updateValidPatterns();
 
                     addToStack(otherIdx);
