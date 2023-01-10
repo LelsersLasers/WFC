@@ -41,11 +41,11 @@ let percentDone = 0;
 
 let sourceImg = new Image();
 
-let patterns = [];
+const patterns = [];
 
 const grid = [];
 
-let stack = [];
+const stack = [];
 //----------------------------------------------------------------------------//
 
 
@@ -121,6 +121,12 @@ class Pattern {
         this.ceiling = offsetY + 1;
         this.left = offsetX + 1;
         this.right = sourceImg.width - offsetX;
+    }
+    displayColor() {
+        return this.colors[0][0];
+    }
+    isNotOutOfBounds() {
+        return !this.displayColor().matches(new Color(-1, -1, -1));
     }
     rotateOnce() {
         function rotate90(matrix) {
@@ -275,16 +281,17 @@ class GridSpot {
             createGrid();
         } else if (this.validStates.length == 1) {
             const pattern = this.validStates[0];
-            this.rect.style.fill = pattern.colors[0][0].toRgb();
+            this.rect.style.fill = pattern.displayColor().toRgb();
         } else if (DRAW_STATES) {
             // average colors
             let r = 0, g = 0, b = 0;
             let count = 0;
             for (let i = 0; i < this.validPatterns.length; i++) {
                 const pattern = this.validPatterns[i];
-                r += pattern.colors[0][0].r;
-                g += pattern.colors[0][0].g;
-                b += pattern.colors[0][0].b;
+                const color = pattern.displayColor();
+                r += color.r;
+                g += color.g;
+                b += color.b;
                 count++;
             }
             r /= count;
@@ -374,9 +381,11 @@ function swapToSvgAndStart() {
                 } else if (r == 5) {
                     pattern.flipY();
                 }
-                patterns.push(pattern);
+                if (pattern.isNotOutOfBounds()) {
+                    patterns.push(pattern);
+                }
             }
-            
+
         }
     }
 
@@ -599,7 +608,7 @@ function iterate() {
     const idxToCollapse = randomFromList(lowestValidStatesIds);
     grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
 
-    stack = [idxToCollapse];
+    stack.push(idxToCollapse); // stack is empty; stack = [idxToCollapse]
     propagate();
 }
 //----------------------------------------------------------------------------//

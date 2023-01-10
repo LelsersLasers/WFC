@@ -17,8 +17,7 @@ Takes 1 input image.
 - Final touches
     - Wrap edge cases
         - Is wrapping working correctly?
-        - If WRAP == true: FLOOR/CEILING/SIDE => 0
-        - If FLOOR/CEILING/SIDE >= 0: ROTATE/FLIP = false; 
+        - How wrap, floor/ceiling/side, rotate/flip interact 
         - How Color(-1, -1, -1) interacts?
         - Top edge vs bottom edge (left vs right)
             - Acts differently
