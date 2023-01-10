@@ -513,6 +513,11 @@ function calcTileSize() {
 
 
 //----------------------------------------------------------------------------//
+function addToStack(idx) {
+    if (!stack.some(stackIdx => stackIdx[0] == idx[0] && stackIdx[1] == idx[1])) {
+        stack.push(idx);
+    }
+}
 function findLowestEntropySpots() {
     let lowestE = patterns.length;
     let lowestEIds = [];
@@ -591,12 +596,7 @@ function propagate() {
                     otherPossiblePatterns.splice(i, 1);
                     grid[otherIdx[0]][otherIdx[1]].updateValidPatterns();
 
-
-                    // if this spot was affected, also affect its neighbors
-                    // but no need to add it to the stack if it is already there
-                    if (!stack.some(idx => idx[0] == otherIdx[0] && idx[1] == otherIdx[1])) {
-                        stack.push([otherIdx[0], otherIdx[1]]);
-                    }
+                    addToStack(otherIdx);
                 }
             }
         }
@@ -613,7 +613,7 @@ function iterate() {
     const idxToCollapse = randomFromList(lowestValidStatesIds);
     grid[idxToCollapse[0]][idxToCollapse[1]].collapse();
 
-    stack.push(idxToCollapse); // stack is empty; stack = [idxToCollapse]
+    addToStack(idxToCollapse);
     propagate();
 }
 //----------------------------------------------------------------------------//
