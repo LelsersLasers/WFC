@@ -1,15 +1,15 @@
-const DIMS_X = 30;
-const DIMS_Y = 20;
+let DIMS_X = 30;
+let DIMS_Y = 20;
 
-const WRAP = false;
+let WRAP = false;
 
-const ROTATE_AND_FLIP = false;
+let ROTATE_AND_FLIP = false;
 
-const FLOOR = 1;
-const CEILING = 1;
-const SIDE = 1;
+let FLOOR = 1;
+let CEILING = 1;
+let SIDE = 1;
 
-const N = 3;
+let N = 3;
 //----------------------------------------------------------------------------//
 
 
@@ -18,7 +18,7 @@ let DRAW_STATES = true;
 let DRAW_EDGES = false;
 let DRAW_H = true;
 
-let LOOP = false;
+let LOOP = true;
 //----------------------------------------------------------------------------//
 
 
@@ -361,9 +361,7 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
             img.width = this.width;
             sourceImg = img;
 
-            setTimeout(() => {
-                swapToSvgAndStart()
-            }, 2000);
+            setTimeout(() => start(), 2000);
         }
     };
     reader.readAsDataURL(input.files[0]);
@@ -382,12 +380,31 @@ function resize() {
     svg.setAttribute("width", width);
     svg.setAttribute("height", height);
 }
+function apply() {
+    // N = parseInt(document.getElementById("N").value);
+
+    start();
+}
+function togglePause() {
+    const button = document.getElementById("pauseButton");
+    LOOP = !LOOP;
+    if (LOOP) {
+        mainUpdateLoop();
+        button.innerHTML = "Pause";
+    } else {
+        button.innerHTML = "Resume";
+    }
+}
+//----------------------------------------------------------------------------//
+
+
+//----------------------------------------------------------------------------//
 function setupSvg() {
     resize();
 
     svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
 }
-function swapToSvgAndStart() {
+function start() {
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
 
@@ -637,10 +654,7 @@ document.addEventListener("keydown", keyDownHandle, false);
 function keyDownHandle(e) {
     switch (e.key.toLowerCase()) {
         case "enter":
-            LOOP = !LOOP;
-            if (LOOP) {
-                mainUpdateLoop();
-            }
+            togglePause();
             break;    
         case " ":
             if (!LOOP) {

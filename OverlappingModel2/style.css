@@ -56,25 +56,27 @@ svg {
     /* border-radius: 0.5em; */
 }
 
-/* .spacing {
+.spacing {
     content: "";
     display: block;
-    margin: 0.5em;
-} */
+    margin: 0.3em;
+}
 
-/* hr {
+hr {
     background-color: #ECEFF4;
     border: none;
     height: 1px;
     border-radius: 10px;
 }
+
 label {
     color: #ECEFF4;
     height: 1.2em;
     font-size: 1em;
     cursor: pointer;
-} */
-/* input {
+}
+
+input {
     height: 1.2em;
     font-size: 1em;
     padding: 0.8em 0.5em;
@@ -88,6 +90,10 @@ label {
 }
 input:focus {
     outline: 2px solid #EBCB8B !important;
+}
+.smallInput {
+    width: 3em;
+    /* text-align: center; */
 }
 input[type="radio"] {
     width: 0.8em;
@@ -104,6 +110,7 @@ input[type="checkbox"] {
     color: #ECEFF4;
     outline: none !important;
 }
+
 button {
     font-size: 1em;
     border: none;
@@ -118,15 +125,4 @@ button {
 }
 button:focus {
     outline: 2px solid #EBCB8B;
-} */
-/* canvas {
-    background-color: #2b313f;
-    outline: 2px solid #B48EAD;
-    margin: 0 auto;
-    padding: 0;
-    padding-left: 10px !important;
-    border-radius: 0.5em;
 }
-canvas:focus {
-    outline: 2px solid #EBCB8B;
-} */

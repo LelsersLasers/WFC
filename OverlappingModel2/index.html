@@ -24,7 +24,67 @@
         </div>
 
         <div id="settings">
+
             <input type="file" id="fileInput" accept="image/jpeg, image/png, image/jpg" />
+
+            <label for="DIMS_X">Output Width:</label>
+            <input class="smallInput" type="text" id="DIMS_X" value="20" />
+            <br class="spacing" />
+
+            <label for="DIMS_Y">Output Height:</label>
+            <input class="smallInput" type="text" id="DIMS_Y" value="20" />
+            <br class="spacing" />
+
+            <label for="N">N:</label>
+            <input class="smallInput" type="text" id="N" value="3" />
+            <br class="spacing" />
+
+            <label for="WRAP">Wrap:</label>
+            <input type="checkbox" id="WRAP" />
+            <br class="spacing" />
+
+            <label for="ROTATE_AND_FLIP">Rotate/flip patterns:</label>
+            <input type="checkbox" id="ROTATE_AND_FLIP" />
+            <br class="spacing" />
+
+            <label for="FLOOR">Floor:</label>
+            <input class="smallInput" type="text" id="FLOOR" value="1" />
+            <br class="spacing" />
+
+            <label for="CEILING">Ceiling:</label>
+            <input class="smallInput" type="text" id="CEILING" value="1" />
+            <br class="spacing" />
+
+            <label for="SIDE">Side:</label>
+            <input class="smallInput" type="text" id="SIDE" value="1" />
+            <br class="spacing" />
+
+            <br />
+            
+            <button onclick="apply()">Apply</button>
+
+            <br />
+            <hr />
+
+            <label for="DRAW_STATES">Draw non-collapsed states:</label>
+            <input type="checkbox" id="DRAW_STATES" />
+            <br class="spacing" />
+
+            <label for="DRAW_EDGES">Draw outlines:</label>
+            <input type="checkbox" id="DRAW_EDGES" />
+            <br class="spacing" />
+
+            <label for="DRAW_H">Draw entropy:</label>
+            <input type="checkbox" id="DRAW_H" />
+            <br class="spacing" />
+
+            <hr />
+
+            <button id="pauseButton" onclick="togglePause()" style="margin-top: 0.5em;">Pause</button>
+            <br />
+
+            <button onclick="start()">Reset</button>
+
         </div>
 
     </div>
