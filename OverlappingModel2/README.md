@@ -37,6 +37,7 @@ Takes 1 input image.
         - Only show if DRAW_H is checked
     - Load/save?
     - Infos for what is being console logged
+- "Save as PNG" option????
 - Clean?
     - Use the GridSpot class a bit better?
     - async properly on image load
