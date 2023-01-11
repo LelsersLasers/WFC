@@ -25,26 +25,23 @@ let LOOP = true;
 //----------------------------------------------------------------------------//
 const svgns = "http://www.w3.org/2000/svg";
 
+const grid = [];
+const patterns = [];
+const stack = [];
+
 const svg = document.getElementById("mainSvg");
-setupSvg();
+resize();
 
 let delta = 1/60;
 let lastTime = performance.now();
 
-const TILE_SIZE = calcTileSize();
-const TILE_OFFSET_X = (svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2;
-const TILE_OFFSET_Y = (svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2;
+let TILE_SIZE, TILE_OFFSET_X, TILE_OFFSET_Y;
+calcTileSize();
 
 let iteration = 0;
 let percentDone = 0;
 
 let sourceImg = new Image();
-
-const patterns = [];
-
-const grid = [];
-
-const stack = [];
 //----------------------------------------------------------------------------//
 
 
@@ -111,8 +108,6 @@ class Pattern {
 
         this.overlaps = [];
 
-        this.r = 0;
-
         this.srcX = offsetX;
         this.srcY = offsetY;
 
@@ -148,17 +143,14 @@ class Pattern {
         for (let i = 0; i < r; i++) {
             this.rotateOnce();
         }
-        this.r = r;
     }
     flipX() {
         for (let x = 0; x < N; x++) {
             this.colors[x].reverse();
         }
-        this.r = 4;
     }
     flipY() {
         this.colors.reverse();
-        this.r = 5;
     }
     matches(other) {
         for (let x = 0; x < N; x++) {
@@ -212,40 +204,39 @@ class Pattern {
 }
 class GridSpot {
     constructor(x, y) {
+        this.x = x;
+        this.y = y;
+
         //--------------------------------------------------------------------//
-        this.rect = document.createElementNS(svgns, "rect");
+        const rect = document.createElementNS(svgns, "rect");
 
-        this.rect.setAttribute("x", TILE_OFFSET_X + x * (TILE_SIZE + 1));
-        this.rect.setAttribute("y", TILE_OFFSET_Y + y * (TILE_SIZE + 1));
-        this.rect.setAttribute("width", TILE_SIZE);
-        this.rect.setAttribute("height", TILE_SIZE);
+        rect.setAttribute("stroke-width", 2);
+        rect.style.fill = "black";
 
-        this.rect.setAttribute("stroke-width", 2);
-        this.rect.style.fill = "black";
+        rect.id = toId(x, y) + "_rect";
 
-        this.rect.id = toId(x, y);
-
-        svg.appendChild(this.rect);
+        svg.appendChild(rect);
         //--------------------------------------------------------------------//
 
         //--------------------------------------------------------------------//
-        this.text = document.createElementNS(svgns, "text");
-
-        this.text.setAttribute("x", TILE_OFFSET_X + (x + 0.5) * (TILE_SIZE + 1));
-        this.text.setAttribute("y", TILE_OFFSET_Y + (y + 0.5) * (TILE_SIZE + 1));
+        const text = document.createElementNS(svgns, "text");
         
-        this.text.setAttribute("text-anchor", "middle");
-        this.text.style.textAlign = "center";
-        this.text.style.alignmentBaseline = "middle";
-        this.text.style.verticalAlign = "middle";
+        text.setAttribute("text-anchor", "middle");
+        text.style.textAlign = "center";
+        text.style.alignmentBaseline = "middle";
+        text.style.verticalAlign = "middle";
 
-        this.text.style.fill = "red";
+        text.style.fill = "red";
 
-        this.text.setAttribute("font-size", TILE_SIZE / 3);
-        this.text.innerHTML = "";
+        text.setAttribute("font-size", TILE_SIZE / 3);
+        text.innerHTML = "";
 
-        svg.appendChild(this.text);
+        text.id = toId(x, y) + "_text";
+
+        svg.appendChild(text);
         //--------------------------------------------------------------------//
+
+        this.updateSvgPos();
 
         //--------------------------------------------------------------------//
         this.floor = DIMS_Y - y;
@@ -284,6 +275,26 @@ class GridSpot {
             }
         }
         //--------------------------------------------------------------------//
+    }
+    getRect() {}
+    getText() {}
+    updateSvgPos() {
+
+        const rect = document.getElementById(toId(this.x, this.y) + "_rect");
+
+        rect.setAttribute("x", TILE_OFFSET_X + this.x * (TILE_SIZE + 1));
+        rect.setAttribute("y", TILE_OFFSET_Y + this.y * (TILE_SIZE + 1));
+        rect.setAttribute("width", TILE_SIZE);
+        rect.setAttribute("height", TILE_SIZE);
+
+        const text = document.getElementById(toId(this.x, this.y) + "_text");
+
+        text.setAttribute("x", TILE_OFFSET_X + (this.x + 0.5) * (TILE_SIZE + 1));
+        text.setAttribute("y", TILE_OFFSET_Y + (this.y + 0.5) * (TILE_SIZE + 1));
+
+        
+
+        console.log("aa");
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -371,6 +382,8 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
 
 //----------------------------------------------------------------------------//
 function resize() {
+    console.log("resizing");
+
     const maxWidth = (window.innerWidth) * 0.75;
     const maxHeight = window.innerHeight - 32;
 
@@ -379,11 +392,60 @@ function resize() {
 
     svg.setAttribute("width", width);
     svg.setAttribute("height", height);
+
+
+    svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
+
+    if (grid.length > 0) {
+        for (let x = 0; x < DIMS_X; x++) {
+            for (let y = 0; y < DIMS_Y; y++) {
+                grid[x][y].updateSvgPos();
+            }
+        }
+            
+    }
+}
+function setPosInt(id, failMessage) {
+    const element = document.getElementById(id);
+    const value = parseInt(element.value);
+    if (value > 0) {
+        element.style.border = "none";
+        element.value = value;
+        return value;
+    } else {
+        element.style.border = "2px solid #BF616A";
+        alert(failMessage);
+        return -1;
+    }
 }
 function apply() {
-    // N = parseInt(document.getElementById("N").value);
+    let shouldStart = true;
 
-    start();
+    let valueN = setPosInt("N", "N must be an integer greater than 0");
+    if (valueN > 0) {
+        N = valueN;
+    } else { shouldStart = false; }
+
+    let valueDIMS_X = setPosInt("DIMS_X", "DIMS_X must be an integer greater than 0");
+    if (valueDIMS_X > 0) {
+        DIMS_X = valueDIMS_X;
+        resize();
+        calcTileSize();
+    } else { shouldStart = false; }
+
+    let valueDIMS_Y = setPosInt("DIMS_Y", "DIMS_Y must be an integer greater than 0");
+    if (valueDIMS_Y > 0) {
+        DIMS_Y = valueDIMS_Y;
+        resize();
+        calcTileSize();
+    } else { shouldStart = false; }
+
+
+
+
+    if (shouldStart) {
+        start();
+    }
 }
 function togglePause() {
     const button = document.getElementById("pauseButton");
@@ -399,12 +461,11 @@ function togglePause() {
 
 
 //----------------------------------------------------------------------------//
-function setupSvg() {
-    resize();
-
-    svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
-}
 function start() {
+
+    if (sourceImg.width == 0) { // avoid user clicking reset before anything happened
+        return;
+    }
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
 
@@ -479,10 +540,10 @@ function setDelta() {
 function toId(x, y) {
     return x + "_" + y;
 }
-// function fromId(id) {
-//     const split = id.split("_");
-//     return {x: parseInt(split[0]), y: parseInt(split[1])};
-// }
+function fromId(id) {
+    const split = id.split("_");
+    return {x: parseInt(split[0]), y: parseInt(split[1])};
+}
 //----------------------------------------------------------------------------//
 
 
@@ -503,9 +564,11 @@ function calcTileSize() {
     // Calculate the tile size
     const tileW = (svg.getAttribute("width") - 20) / DIMS_X;
     const tileH = (svg.getAttribute("height") - 20) / DIMS_Y;
-    const tileSize = Math.min(tileW, tileH) - 1;
 
-    return tileSize;
+    TILE_SIZE = Math.min(tileW, tileH) - 1;
+
+    TILE_OFFSET_X = (svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2;
+    TILE_OFFSET_Y = (svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2;
 }
 //----------------------------------------------------------------------------//
 

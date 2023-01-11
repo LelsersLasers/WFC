@@ -31,10 +31,8 @@ Takes 1 input image.
     - Maybe make it like the 3d cellular automata
         - https://lelserslasers.itch.io/3d-cellular-automata-wgpu-rust
         - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML
-    - And a start menu for non "run time" options
-        - Wrap, N, upload picture there, dims, which flips/rotations to use, ceiling/floor pixels, etc
-        - Like wordle single player create game page
-    - Resizing
+    - Make text input fill width?????????
+    - Improve file upload input
 - Clean?
     - Use the GridSpot class a bit better?
     - async properly on image load
