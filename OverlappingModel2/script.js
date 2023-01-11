@@ -226,7 +226,7 @@ class GridSpot {
         text.style.verticalAlign = "middle";
 
         text.style.fill = "red";
-        
+
         text.innerHTML = "";
 
         text.id = toId(x, y) + "_text";
@@ -410,41 +410,62 @@ function resize() {
             
     }
 }
-function setPosInt(id, failMessage) {
+function setInt(id, failMessage, min = -Infinity, max = Infinity) {
+    // min/max are inclusive
     const element = document.getElementById(id);
     const value = parseInt(element.value);
-    if (value > 0) {
+    if (value >= min && value <= max) {
         element.style.border = "none";
         element.value = value;
         return value;
     } else {
         element.style.border = "2px solid #BF616A";
         alert(failMessage);
-        return -1;
+        return false;
     }
 }
 function apply() {
     let shouldStart = true;
     let shouldResize = false;
 
-    let valueN = setPosInt("N", "N must be an integer greater than 0");
-    if (valueN > 0) {
-        N = valueN;
-    } else { shouldStart = false; }
 
-    let valueDIMS_X = setPosInt("DIMS_X", "DIMS_X must be an integer greater than 0");
-    if (valueDIMS_X > 0) {
+    let valueDIMS_X = setInt("DIMS_X", "Output width must be an integer greater than 0", 1);
+    if (valueDIMS_X !== false) {
         DIMS_X = valueDIMS_X;
         shouldResize = true;
     } else { shouldStart = false; }
 
-    let valueDIMS_Y = setPosInt("DIMS_Y", "DIMS_Y must be an integer greater than 0");
-    if (valueDIMS_Y > 0) {
+    let valueDIMS_Y = setInt("DIMS_Y", "Output height must be an integer greater than 0", 1);
+    if (valueDIMS_Y !== false) {
         DIMS_Y = valueDIMS_Y;
         shouldResize = true;
     } else { shouldStart = false; }
 
+    let valueN = setInt("N", "N must be an integer greater than 0", 1);
+    if (valueN !== false) {
+        N = valueN;
+    } else { shouldStart = false; }
 
+    let valueWRAP = document.getElementById("WRAP").checked;
+    WRAP = valueWRAP;
+
+    let valueROTATE_AND_FLIP = document.getElementById("ROTATE_AND_FLIP").checked;
+    ROTATE_AND_FLIP = valueROTATE_AND_FLIP;
+
+    let valueFLOOR = setInt("FLOOR", "Floor must be an integer greater than or equal to 0", 0);
+    if (valueFLOOR !== false) {
+        FLOOR = valueFLOOR;
+    } else { shouldStart = false; }
+
+    let valueCEILING = setInt("CEILING", "Ceiling must be an integer greater than or equal to 0", 0);
+    if (valueCEILING !== false) {
+        CEILING = valueCEILING;
+    } else { shouldStart = false; }
+
+    let valueSIDE = setInt("SIDE", "side must be an integer greater than or equal to 0", 0);
+    if (valueSIDE !== false) {
+        SIDE = valueSIDE;
+    } else { shouldStart = false; }
 
 
     if (shouldStart) {

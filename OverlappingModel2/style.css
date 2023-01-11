@@ -95,11 +95,15 @@ input:focus {
     width: 3em;
     /* text-align: center; */
 }
-input[type="radio"] {
+input[type="file"] {
+    height: 3em;
+    cursor: pointer;
+}
+/* input[type="radio"] {
     width: 0.8em;
     color: #ECEFF4;
     outline: none !important;
-}
+} */
 input[type="checkbox"] {
     width: 0.8em;
     height: 1em;
@@ -109,6 +113,7 @@ input[type="checkbox"] {
     position: relative;
     color: #ECEFF4;
     outline: none !important;
+    cursor: pointer;
 }
 
 button {
