@@ -29,14 +29,13 @@ const grid = [];
 const patterns = [];
 const stack = [];
 
+let TILE_SIZE, TILE_OFFSET_X, TILE_OFFSET_Y;
+
 const svg = document.getElementById("mainSvg");
 resize();
 
 let delta = 1/60;
 let lastTime = performance.now();
-
-let TILE_SIZE, TILE_OFFSET_X, TILE_OFFSET_Y;
-calcTileSize();
 
 let iteration = 0;
 let percentDone = 0;
@@ -227,8 +226,7 @@ class GridSpot {
         text.style.verticalAlign = "middle";
 
         text.style.fill = "red";
-
-        text.setAttribute("font-size", TILE_SIZE / 3);
+        
         text.innerHTML = "";
 
         text.id = toId(x, y) + "_text";
@@ -276,25 +274,28 @@ class GridSpot {
         }
         //--------------------------------------------------------------------//
     }
-    getRect() {}
-    getText() {}
+    getRect() {
+        return document.getElementById(toId(this.x, this.y) + "_rect");
+    }
+    getText() {
+        return document.getElementById(toId(this.x, this.y) + "_text");
+    }
     updateSvgPos() {
 
-        const rect = document.getElementById(toId(this.x, this.y) + "_rect");
+        const rect = this.getRect();
 
         rect.setAttribute("x", TILE_OFFSET_X + this.x * (TILE_SIZE + 1));
         rect.setAttribute("y", TILE_OFFSET_Y + this.y * (TILE_SIZE + 1));
+
         rect.setAttribute("width", TILE_SIZE);
         rect.setAttribute("height", TILE_SIZE);
 
-        const text = document.getElementById(toId(this.x, this.y) + "_text");
+        const text = this.getText();
+
+        text.setAttribute("font-size", TILE_SIZE / 3);
 
         text.setAttribute("x", TILE_OFFSET_X + (this.x + 0.5) * (TILE_SIZE + 1));
         text.setAttribute("y", TILE_OFFSET_Y + (this.y + 0.5) * (TILE_SIZE + 1));
-
-        
-
-        console.log("aa");
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -309,12 +310,15 @@ class GridSpot {
         }
     }
     setColor() {
+        const rect = this.getRect();
+        const text = this.getText();
+
         if (this.validStates.length == 0) {
             console.log("Knotted! Unable to progress, starting over...")
             createGrid();
         } else if (this.validStates.length == 1) {
             const pattern = this.validStates[0];
-            this.rect.style.fill = pattern.displayColor().toRgb();
+            rect.style.fill = pattern.displayColor().toRgb();
         } else if (DRAW_STATES) {
             // average colors
             let r = 0, g = 0, b = 0;
@@ -331,25 +335,25 @@ class GridSpot {
             g /= count;
             b /= count;
             
-            this.rect.style.fill = `rgb(${r}, ${g}, ${b})`;
+            rect.style.fill = `rgb(${r}, ${g}, ${b})`;
         } else {
-            this.rect.style.fill = "black";
+            rect.style.fill = "black";
         }
 
         if (DRAW_EDGES) {
             if (this.validStates.length == 1) {
-                this.rect.style.stroke = "blue";
+                rect.style.stroke = "blue";
             } else {
-                this.rect.style.stroke = "white";
+                rect.style.stroke = "white";
             }
         } else {
-            this.rect.style.stroke = this.rect.style.fill;
+            rect.style.stroke = rect.style.fill;
         }
 
         if (DRAW_H) {
-            this.text.innerHTML = this.validPatterns.length;
+            text.innerHTML = this.validPatterns.length;
         } else {
-            this.text.innerHTML = "";
+            text.innerHTML = "";
         }
     }
 }
@@ -393,8 +397,9 @@ function resize() {
     svg.setAttribute("width", width);
     svg.setAttribute("height", height);
 
-
     svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
+
+    calcTileSize();
 
     if (grid.length > 0) {
         for (let x = 0; x < DIMS_X; x++) {
@@ -420,6 +425,7 @@ function setPosInt(id, failMessage) {
 }
 function apply() {
     let shouldStart = true;
+    let shouldResize = false;
 
     let valueN = setPosInt("N", "N must be an integer greater than 0");
     if (valueN > 0) {
@@ -429,15 +435,13 @@ function apply() {
     let valueDIMS_X = setPosInt("DIMS_X", "DIMS_X must be an integer greater than 0");
     if (valueDIMS_X > 0) {
         DIMS_X = valueDIMS_X;
-        resize();
-        calcTileSize();
+        shouldResize = true;
     } else { shouldStart = false; }
 
     let valueDIMS_Y = setPosInt("DIMS_Y", "DIMS_Y must be an integer greater than 0");
     if (valueDIMS_Y > 0) {
         DIMS_Y = valueDIMS_Y;
-        resize();
-        calcTileSize();
+        shouldResize = true;
     } else { shouldStart = false; }
 
 
@@ -445,6 +449,9 @@ function apply() {
 
     if (shouldStart) {
         start();
+    }
+    if (shouldResize) {
+        resize();
     }
 }
 function togglePause() {
@@ -469,6 +476,7 @@ function start() {
 
     const rMax = ROTATE_AND_FLIP ? 6 : 1;
 
+    patterns.length = 0;
     for (let x = 0; x < sourceImg.width; x++) {
         for (let y = 0; y < sourceImg.height; y++) {
 

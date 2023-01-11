@@ -33,6 +33,9 @@ Takes 1 input image.
         - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML
     - Make text input fill width?????????
     - Improve file upload input
+    - DRAW_H text color
+        - type=color
+        - Only show if DRAW_H is checked
 - Clean?
     - Use the GridSpot class a bit better?
     - async properly on image load
