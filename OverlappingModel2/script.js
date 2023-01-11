@@ -16,7 +16,7 @@ let N = 3;
 //----------------------------------------------------------------------------//
 let DRAW_STATES = true;
 let DRAW_EDGES = false;
-let DRAW_H = true;
+let DRAW_H = false;
 
 let LOOP = true;
 //----------------------------------------------------------------------------//
@@ -381,6 +381,22 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
     };
     reader.readAsDataURL(input.files[0]);
 });
+Array.from(document.getElementById("liveCheckboxes").children).forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+        switch (checkbox.id) {
+            case "DRAW_STATES":
+                DRAW_STATES = checkbox.checked;
+                break;
+            case "DRAW_EDGES":
+                DRAW_EDGES = checkbox.checked;
+                break;
+            case "DRAW_H":
+                DRAW_H = checkbox.checked;
+                break;
+        }
+        updateSvg();
+    })
+});
 //----------------------------------------------------------------------------//
 
 
@@ -630,6 +646,7 @@ function findLowestEntropySpots() {
 
     if (fullyCollapsed) {
         LOOP = false;
+        document.getElementById("pauseButton").innerHTML = "Resume";
         console.log("Fully collapsed!");
         return null;
     } else {
@@ -741,37 +758,38 @@ function mainUpdateLoop() {
 
 
 //----------------------------------------------------------------------------//
-document.addEventListener("keydown", keyDownHandle, false);
+// document.addEventListener("keydown", keyDownHandle, false);
 
-function keyDownHandle(e) {
-    switch (e.key.toLowerCase()) {
-        case "enter":
-            togglePause();
-            break;    
-        case " ":
-            if (!LOOP) {
-                mainUpdateLoop();
-            }
-            break;
-        case "escape":
-            LOOP = false;
-            break;
-        case "d":
-            DRAW_STATES = !DRAW_STATES;
-            updateSvg();
-            break;
-        case "e":
-            DRAW_EDGES = !DRAW_EDGES;
-            updateSvg();
-            break;
-        case "h":
-            DRAW_H = !DRAW_H;
-            updateSvg();
-            break;
-        case "r":
-            createGrid();
-            console.log("Reseting!")
-            break;
-    }
-}
+// function keyDownHandle(e) {
+//     switch (e.key.toLowerCase()) {
+//         case "enter":
+//             togglePause();
+//             break;    
+//         case " ":
+//             if (!LOOP) {
+//                 mainUpdateLoop();
+//             }
+//             break;
+//         case "escape":
+//             LOOP = false;
+//             document.getElementById("pauseButton").innerHTML = "Resume";
+//             break;
+//         case "d":
+//             DRAW_STATES = !DRAW_STATES;
+//             updateSvg();
+//             break;
+//         case "e":
+//             DRAW_EDGES = !DRAW_EDGES;
+//             updateSvg();
+//             break;
+//         case "h":
+//             DRAW_H = !DRAW_H;
+//             updateSvg();
+//             break;
+//         case "r":
+//             createGrid();
+//             console.log("Reseting!")
+//             break;
+//     }
+// }
 //----------------------------------------------------------------------------//

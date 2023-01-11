@@ -30,7 +30,7 @@ div {
     overflow: auto;
 }
 #svgHolder {
-    flex: 4;
+    flex: 2;
     margin: 0 auto;
     padding: 2em;
     display: flex;
@@ -48,12 +48,12 @@ svg {
 
     /* z-index: -1; */
 
-    /* background-color: #2E3440; */
+    background-color: #3B4252;
     /* outline: 2px solid #B48EAD; */
     margin: 0 auto;
     padding: 0;
     /* padding-left: 10px !important; */
-    /* border-radius: 0.5em; */
+    border-radius: 0.5em;
 }
 
 .spacing {
