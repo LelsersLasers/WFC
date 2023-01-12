@@ -387,22 +387,65 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
     };
     reader.readAsDataURL(input.files[0]);
 });
-Array.from(document.getElementById("liveliveUpdate").children).forEach((element) => {
-    element.addEventListener("change", () => {
-        switch (element.id) {
-            case "DRAW_STATES":
-                DRAW_STATES = element.checked;
-                break;
-            case "DRAW_EDGES":
-                DRAW_EDGES = element.checked;
-                break;
-            case "DRAW_H":
-                DRAW_H = element.checked;
-                break;
-            // TODO: color inputs
+Array.from(document.getElementById("liveUpdate").children).forEach((element) => {
+
+    if (["DRAW_STATES", "DRAW_EDGES", "DRAW_H"].includes(element.id)) {
+
+        element.addEventListener("change", () => {
+            switch (element.id) {
+                case "DRAW_STATES":
+                    DRAW_STATES = element.checked;
+                    break;
+                case "DRAW_EDGES":
+                    DRAW_EDGES = element.checked;
+                    if (DRAW_EDGES) {
+                        document.getElementById("OUTLINE_COLOR_HOLDER").removeAttribute("hidden");
+                        document.getElementById("COLLAPSED_COLOR_HOLDER").removeAttribute("hidden");
+                    } else {
+                        document.getElementById("OUTLINE_COLOR_HOLDER").setAttribute("hidden", "");
+                        document.getElementById("COLLAPSED_COLOR_HOLDER").setAttribute("hidden", "");
+                    }
+                    break;
+                case "DRAW_H":
+                    DRAW_H = element.checked;
+                    if (DRAW_H) {
+                        document.getElementById("H_COLOR_HOLDER").removeAttribute("hidden");
+                    } else {
+                        document.getElementById("H_COLOR_HOLDER").setAttribute("hidden", "");
+                    }
+                    break;
+            }
+            if (grid.length > 0) {
+                updateSvg();
+            }
+        });
+        
+    } else {
+
+        if (element.id.endsWith("_HOLDER")) {
+            Array.from(element.children).forEach((child) => {
+
+                child.addEventListener("input", () => {
+                    console.log(child.id, "joe");
+                    switch (child.id) {
+                        case "OUTLINE_COLOR":
+                            OUTLINE_COLOR = child.value;
+                            break;
+                        case "COLLAPSED_COLOR":
+                            COLLAPSED_COLOR = child.value;
+                            break;
+                        case "H_COLOR":
+                            H_COLOR = child.value;
+                            break;
+                    }
+                    if (grid.length > 0) {
+                        updateSvg();
+                    }
+                });
+
+            });
         }
-        updateSvg();
-    })
+    }
 });
 //----------------------------------------------------------------------------//
 
