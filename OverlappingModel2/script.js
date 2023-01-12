@@ -661,6 +661,67 @@ function calcTileSize() {
     TILE_OFFSET_X = (svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2;
     TILE_OFFSET_Y = (svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2;
 }
+function svgToPng() {
+    // const createStyleElementFromCSS = () => {
+    //     // JSFiddle's custom CSS is defined in the second stylesheet file
+    //     const sheet = document.styleSheets[0];
+      
+    //     const styleRules = [];
+    //     for (let i = 0; i < sheet.cssRules.length; i++) {
+    //         styleRules.push(sheet.cssRules.item(i).cssText);
+    //     }
+      
+    //     const style = document.createElement('style');
+    //     // style.type = 'text/css';
+    //     style.appendChild(document.createTextNode(styleRules.join(' ')))
+      
+    //     return style;
+    // };
+    // const style = createStyleElementFromCSS();
+      
+    const download = () => {
+        // fetch SVG-rendered image as a blob object
+        const svgToDownload = document.getElementById("mainSvg");
+        // svgToDownload.insertBefore(style, svgToDownload.firstChild); // CSS must be explicitly embedded
+        const data = (new XMLSerializer()).serializeToString(svgToDownload);
+        const svgBlob = new Blob([data], {
+            type: 'image/svg+xml;charset=utf-8'
+        });
+        // style.remove(); // remove temporarily injected CSS
+      
+        // convert the blob object to a dedicated URL
+        const url = URL.createObjectURL(svgBlob);
+      
+        // load the SVG blob to a flesh image object
+        const img = new Image();
+        img.addEventListener('load', () => {
+            // draw the image on an ad-hoc canvas
+            // const bbox = svgToDownload.getBBox();
+            const boxW = svg.getAttribute("width");
+            const boxH = svg.getAttribute("height");
+        
+            const canvas = document.createElement('canvas');
+            canvas.width = boxW;
+            canvas.height = boxH;
+        
+            const context = canvas.getContext('2d');
+            context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+            URL.revokeObjectURL(url);
+        
+            // trigger a synthetic download operation with a temporary link
+            const a = document.createElement('a');
+            a.download = 'WFC.png';
+            document.body.appendChild(a);
+            a.href = canvas.toDataURL();
+            a.click();
+            a.remove();
+        });
+        img.src = url;
+    };
+
+    download();
+}
 //----------------------------------------------------------------------------//
 
 
@@ -779,7 +840,7 @@ function updateSvg() {
         }
     }
     percentDone /= DIMS_X * DIMS_Y * (patterns.length - 1);
-    percentDone = parseFloat((percentDone * 100).toFixed(2));
+    percentDone = (percentDone * 100).toFixed(2);
 }
 function mainUpdateLoop() {
 
@@ -792,11 +853,11 @@ function mainUpdateLoop() {
     updateSvg();
 
     setDelta();
-    const fps = parseInt((1000 / delta).toFixed(0));
+    const fps = (1000 / delta).toFixed(0);
     document.getElementById("fpsText").innerHTML = "FPS: " + fps;
 
     document.getElementById("percentDoneText").innerHTML = "Percent Done: " + percentDone + "%";
-    document.getElementById("stackText").innerHTML = "Stack Length: " + stack.length;
+    document.getElementById("stackText").innerHTML = "Propagation Stacks: " + stack.length;
     document.getElementById("iterationText").innerHTML = "Random Decisions: " + iteration;
 
     if (LOOP) {
