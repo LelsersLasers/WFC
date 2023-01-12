@@ -23,6 +23,7 @@ div {
 }
 #settings {
     padding: 2em;
+    padding-top: 1.5em;
     flex: 1;
     margin: 1em;
     border-radius: 1em;

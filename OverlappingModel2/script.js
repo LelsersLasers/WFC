@@ -318,8 +318,7 @@ class GridSpot {
         const rect = this.getRect();
         const text = this.getText();
 
-        if (this.validStates.length == 0) {
-            console.log("Knotted! Unable to progress, starting over...")
+        if (this.validStates.length == 0) { // knotted
             createGrid();
         } else if (this.validStates.length == 1) {
             const pattern = this.validStates[0];
@@ -419,14 +418,13 @@ Array.from(document.getElementById("liveUpdate").children).forEach((element) => 
                 updateSvg();
             }
         });
-        
+
     } else {
 
         if (element.id.endsWith("_HOLDER")) {
             Array.from(element.children).forEach((child) => {
 
                 child.addEventListener("input", () => {
-                    console.log(child.id, "joe");
                     switch (child.id) {
                         case "OUTLINE_COLOR":
                             OUTLINE_COLOR = child.value;
@@ -452,8 +450,6 @@ Array.from(document.getElementById("liveUpdate").children).forEach((element) => 
 
 //----------------------------------------------------------------------------//
 function resize() {
-    console.log("resizing");
-
     const maxWidth = (window.innerWidth) * 0.75;
     const maxHeight = window.innerHeight - 32;
 
@@ -697,7 +693,6 @@ function findLowestEntropySpots() {
     if (fullyCollapsed) {
         LOOP = false;
         document.getElementById("pauseButton").innerHTML = "Resume";
-        console.log("Fully collapsed!");
         return null;
     } else {
         return lowestEIds;
@@ -798,48 +793,14 @@ function mainUpdateLoop() {
 
     setDelta();
     const fps = parseInt((1000 / delta).toFixed(0));
-    console.log({ fps, percentDone, iteration, stack});
+    document.getElementById("fpsText").innerHTML = "FPS: " + fps;
+
+    document.getElementById("percentDoneText").innerHTML = "Percent Done: " + percentDone + "%";
+    document.getElementById("stackText").innerHTML = "Stack Length: " + stack.length;
+    document.getElementById("iterationText").innerHTML = "Random Decisions: " + iteration;
 
     if (LOOP) {
         setTimeout(mainUpdateLoop, 0);
     }
 }
-//----------------------------------------------------------------------------//
-
-
-//----------------------------------------------------------------------------//
-// document.addEventListener("keydown", keyDownHandle, false);
-
-// function keyDownHandle(e) {
-//     switch (e.key.toLowerCase()) {
-//         case "enter":
-//             togglePause();
-//             break;    
-//         case " ":
-//             if (!LOOP) {
-//                 mainUpdateLoop();
-//             }
-//             break;
-//         case "escape":
-//             LOOP = false;
-//             document.getElementById("pauseButton").innerHTML = "Resume";
-//             break;
-//         case "d":
-//             DRAW_STATES = !DRAW_STATES;
-//             updateSvg();
-//             break;
-//         case "e":
-//             DRAW_EDGES = !DRAW_EDGES;
-//             updateSvg();
-//             break;
-//         case "h":
-//             DRAW_H = !DRAW_H;
-//             updateSvg();
-//             break;
-//         case "r":
-//             createGrid();
-//             console.log("Reseting!")
-//             break;
-//     }
-// }
 //----------------------------------------------------------------------------//
