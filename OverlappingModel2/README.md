@@ -22,7 +22,6 @@ Takes 1 input image.
         - Top edge vs bottom edge (left vs right)
             - Acts differently
     - User proof
-        - Make sure keybinds before starting don't break anything
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
@@ -41,6 +40,7 @@ Takes 1 input image.
 - Clean?
     - Use the GridSpot class a bit better?
     - async properly on image load
+
 ## Resources
 
 - https://discourse.processing.org/t/wave-collapse-function-algorithm-in-processing/12983

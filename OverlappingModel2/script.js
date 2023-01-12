@@ -19,6 +19,11 @@ let DRAW_EDGES = false;
 let DRAW_H = false;
 
 let LOOP = true;
+
+
+let H_COLOR = "#BF616A"
+let OUTLINE_COLOR = "#ECEFF4";
+let COLLAPSED_COLOR = "#B48EAD";
 //----------------------------------------------------------------------------//
 
 
@@ -225,7 +230,7 @@ class GridSpot {
         text.style.alignmentBaseline = "middle";
         text.style.verticalAlign = "middle";
 
-        text.style.fill = "red";
+        text.style.fill = H_COLOR;
 
         text.innerHTML = "";
 
@@ -342,15 +347,16 @@ class GridSpot {
 
         if (DRAW_EDGES) {
             if (this.validStates.length == 1) {
-                rect.style.stroke = "blue";
+                rect.style.stroke = COLLAPSED_COLOR;
             } else {
-                rect.style.stroke = "white";
+                rect.style.stroke = OUTLINE_COLOR;
             }
         } else {
             rect.style.stroke = rect.style.fill;
         }
 
         if (DRAW_H) {
+            text.style.fill = H_COLOR;
             text.innerHTML = this.validPatterns.length;
         } else {
             text.innerHTML = "";
@@ -381,18 +387,19 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
     };
     reader.readAsDataURL(input.files[0]);
 });
-Array.from(document.getElementById("liveCheckboxes").children).forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-        switch (checkbox.id) {
+Array.from(document.getElementById("liveliveUpdate").children).forEach((element) => {
+    element.addEventListener("change", () => {
+        switch (element.id) {
             case "DRAW_STATES":
-                DRAW_STATES = checkbox.checked;
+                DRAW_STATES = element.checked;
                 break;
             case "DRAW_EDGES":
-                DRAW_EDGES = checkbox.checked;
+                DRAW_EDGES = element.checked;
                 break;
             case "DRAW_H":
-                DRAW_H = checkbox.checked;
+                DRAW_H = element.checked;
                 break;
+            // TODO: color inputs
         }
         updateSvg();
     })

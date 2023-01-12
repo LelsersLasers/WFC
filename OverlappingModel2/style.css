@@ -84,7 +84,7 @@ input {
     background-color: #4C566A;
     color: #ECEFF4;
     border-radius: 7px;
-    width: 100%;
+    /* width: 100%; */
     border: none;
     outline: none !important;
 }
@@ -98,6 +98,13 @@ input:focus {
 input[type="file"] {
     height: 3em;
     cursor: pointer;
+    width: 100%;
+}
+input[type="color"] {
+    width: default;
+    padding: 0.15em;
+    height: 1.8em;
+    transform: translate(0, 0.2em);
 }
 /* input[type="radio"] {
     width: 0.8em;
