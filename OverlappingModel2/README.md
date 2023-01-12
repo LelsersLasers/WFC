@@ -31,10 +31,8 @@ Takes 1 input image.
         - https://lelserslasers.itch.io/3d-cellular-automata-wgpu-rust
         - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML
     - Make text input fill width?????????
-- "Save as PNG" option????
 - Clean?
     - Use the GridSpot class a bit better?
-    - async properly on image load
 
 ## Resources
 

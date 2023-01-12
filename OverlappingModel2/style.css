@@ -24,8 +24,10 @@ div {
 #settings {
     padding: 2em;
     padding-top: 1.5em;
+    padding-bottom: 1.5em;
     flex: 1;
     margin: 1em;
+    margin-left: 0;
     border-radius: 1em;
     background-color: #3B4252;
     overflow: auto;
@@ -39,21 +41,9 @@ div {
     align-items: center; 
 }
 svg {
-    /* border: 4px solid #EBCB8B; */
-    /* margin: 0; */
-    /* position: absolute; */
-    /* top: 50%; */
-    /* left: 50%; */
-    /* -ms-transform: translate(-50%, -50%); */
-    /* transform: translate(-50%, -50%); */
-
-    /* z-index: -1; */
-
     background-color: #3B4252;
-    /* outline: 2px solid #B48EAD; */
     margin: 0 auto;
     padding: 0;
-    /* padding-left: 10px !important; */
     border-radius: 0.5em;
 }
 
@@ -94,7 +84,6 @@ input:focus {
 }
 .smallInput {
     width: 3em;
-    /* text-align: center; */
 }
 input[type="file"] {
     height: 3em;
@@ -107,11 +96,6 @@ input[type="color"] {
     height: 1.8em;
     transform: translate(0, 0.2em);
 }
-/* input[type="radio"] {
-    width: 0.8em;
-    color: #ECEFF4;
-    outline: none !important;
-} */
 input[type="checkbox"] {
     width: 0.8em;
     height: 1em;
@@ -127,7 +111,7 @@ input[type="checkbox"] {
 button {
     font-size: 1em;
     border: none;
-    padding: 0.2em 2em;
+    padding: 0.3em 2em;
     background-color: #5E81AC;
     color: #ECEFF4;
     cursor: pointer;

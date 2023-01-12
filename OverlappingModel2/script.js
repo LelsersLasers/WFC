@@ -34,7 +34,7 @@ const grid = [];
 const patterns = [];
 const stack = [];
 
-let TILE_SIZE, TILE_OFFSET_X, TILE_OFFSET_Y;
+let TILE_SIZE;
 
 const svg = document.getElementById("mainSvg");
 resize();
@@ -289,8 +289,8 @@ class GridSpot {
 
         const rect = this.getRect();
 
-        rect.setAttribute("x", TILE_OFFSET_X + this.x * (TILE_SIZE + 1));
-        rect.setAttribute("y", TILE_OFFSET_Y + this.y * (TILE_SIZE + 1));
+        rect.setAttribute("x", this.x * (TILE_SIZE + 1));
+        rect.setAttribute("y", this.y * (TILE_SIZE + 1));
 
         rect.setAttribute("width", TILE_SIZE);
         rect.setAttribute("height", TILE_SIZE);
@@ -299,8 +299,8 @@ class GridSpot {
 
         text.setAttribute("font-size", TILE_SIZE / 3);
 
-        text.setAttribute("x", TILE_OFFSET_X + (this.x + 0.5) * (TILE_SIZE + 1));
-        text.setAttribute("y", TILE_OFFSET_Y + (this.y + 0.5) * (TILE_SIZE + 1));
+        text.setAttribute("x", (this.x + 0.5) * (TILE_SIZE + 1));
+        text.setAttribute("y", (this.y + 0.5) * (TILE_SIZE + 1));
     }
     collapse() {
         const pattern = randomFromList(this.validPatterns);
@@ -381,7 +381,7 @@ document.getElementById("fileInput").addEventListener("change", (e) => {
             img.width = this.width;
             sourceImg = img;
 
-            setTimeout(() => start(), 2000);
+            start();
         }
     };
     reader.readAsDataURL(input.files[0]);
@@ -459,9 +459,12 @@ function resize() {
     svg.setAttribute("width", width);
     svg.setAttribute("height", height);
 
-    svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
-
     calcTileSize();
+
+    svg.setAttribute("width", (TILE_SIZE + 1) * DIMS_X);
+    svg.setAttribute("height", (TILE_SIZE + 1) * DIMS_Y);
+
+    svg.setAttribute("viewBox", "0 0 " + svg.getAttribute("width") + " " + svg.getAttribute("height"));
 
     if (grid.length > 0) {
         for (let x = 0; x < DIMS_X; x++) {
@@ -657,28 +660,8 @@ function calcTileSize() {
     const tileH = (svg.getAttribute("height") - 20) / DIMS_Y;
 
     TILE_SIZE = Math.min(tileW, tileH) - 1;
-
-    TILE_OFFSET_X = (svg.getAttribute("width") - ((TILE_SIZE + 1) * DIMS_X)) / 2;
-    TILE_OFFSET_Y = (svg.getAttribute("height") - ((TILE_SIZE + 1) * DIMS_Y)) / 2;
 }
 function svgToPng() {
-    // const createStyleElementFromCSS = () => {
-    //     // JSFiddle's custom CSS is defined in the second stylesheet file
-    //     const sheet = document.styleSheets[0];
-      
-    //     const styleRules = [];
-    //     for (let i = 0; i < sheet.cssRules.length; i++) {
-    //         styleRules.push(sheet.cssRules.item(i).cssText);
-    //     }
-      
-    //     const style = document.createElement('style');
-    //     // style.type = 'text/css';
-    //     style.appendChild(document.createTextNode(styleRules.join(' ')))
-      
-    //     return style;
-    // };
-    // const style = createStyleElementFromCSS();
-      
     const download = () => {
         // fetch SVG-rendered image as a blob object
         const svgToDownload = document.getElementById("mainSvg");
