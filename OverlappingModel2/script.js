@@ -656,8 +656,8 @@ function getContextFromCanvas(canv, options = {}) {
 }
 function calcTileSize() {
     // Calculate the tile size
-    const tileW = (svg.getAttribute("width") - 20) / DIMS_X;
-    const tileH = (svg.getAttribute("height") - 20) / DIMS_Y;
+    const tileW = (svg.getAttribute("width")) / DIMS_X;
+    const tileH = (svg.getAttribute("height")) / DIMS_Y;
 
     TILE_SIZE = Math.min(tileW, tileH) - 1;
 }
