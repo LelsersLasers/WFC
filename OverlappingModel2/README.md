@@ -22,17 +22,21 @@ Takes 1 input image.
         - Top edge vs bottom edge (left vs right)
             - Acts differently
     - User proof
+    - I think its all working
 - Speed?
     - Lots of unnecessary/duplicated updating
     - Where is speed lost
         - Likely all my "some" iteration
 - UI
-    - Maybe make it like the 3d cellular automata
-        - https://lelserslasers.itch.io/3d-cellular-automata-wgpu-rust
-        - https://github.com/LelsersLasers/3D-Cellular-Automata-WGPU/tree/SetRuleFromHTML
     - Make text input fill width?????????
 - Clean?
     - Use the GridSpot class a bit better?
+- Itch.io
+    - Video
+    - Screenshots/gifs
+    - Write up
+    - Downloadable zip
+    - Mimic WGPU one
 
 ## Resources
 
