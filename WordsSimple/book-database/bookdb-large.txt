@@ -1,0 +1,8 @@
+Alice in Wonderland,Lewis Carroll,1865,book-database/alice.txt
+Pride and Prejudice,Jane Austin,1813,book-database/pride-prejudice.txt
+Heart of Darkness,Joseph Conrad,1899,book-database/heart-of-darkness.txt
+A Tale of Two Cities,Charles Dickens,1857,book-datanase/tale-of-cities.txt
+Moby Dick,Herman Melville,1851,book-database/moby-dick.txt
+Peter Pan,J. M. Barrie,1922,book-database/peter-pan.txt
+Ulysses,James Joyce,1922,book-database/ulysses.txt
+Mary Had a Little Lamb,Sarah Josepha Hale, 1830,book-database/mary-little-lamb.txt

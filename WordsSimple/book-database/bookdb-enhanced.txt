@@ -1,0 +1,6 @@
+New User
+available,Alice in Wonderland,Lewis Carroll,1865,book-database/alice.txt,0
+available,Pride and Prejudice,Jane Austin,1813,book-database/pride-prejudice.txt,0
+available,Peter Pan,J. M. Barrie,1922,book-database/peter-pan.txt,0
+available,Ulysses,James Joyce,1922,book-database/ulysses.txt,0
+available,Mary Had a Little Lamb,Sarah Josepha Hale, 1830,book-database/mary-little-lamb.txt,0
