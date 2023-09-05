@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 import copy
 
@@ -32,16 +34,18 @@ class Spot:
     def collapse(self):
         self.words = [self.random_weighted_word()]
         self.collapsed = True
+        print("Collapsed", str(self))
 
     def update(self, left_words: list[Word] | None = None, right_words: list[Word] | None = None) -> tuple[bool, bool]:
         if left_words is not None:
             left_word_strings = [word.word for word in left_words]
+            any
             if not self.collapsed:
-                self.words = [word for word in self.words if word.left_allowed in left_word_strings]
+                self.words = [word for word in self.words if len([True for allowed_word in word.left_allowed if allowed_word in left_word_strings]) > 0]
         if right_words is not None:
             right_word_strings = [word.word for word in right_words]
             if not self.collapsed:
-                self.words = [word for word in self.words if word.right_allowed in right_word_strings]
+                self.words = [word for word in self.words if len([True for allowed_word in word.right_allowed if allowed_word in right_word_strings]) > 0]
 
         if len(self.words) == 1:
             self.collapsed = True
@@ -55,25 +59,24 @@ class Spot:
 def lowest_entropy_indexes(spots: list[Spot]) -> tuple[list[int], bool, bool]:
     lowest_entropy = float("inf")
     indexes = []
-    done = False
+    done = True
     for i, spot in enumerate(spots):
         if not spot.collapsed:
-            done = True
+            done = False
 
-        if len(spot.words) == 0:
-            return [], True, False
-        elif len(spot.words) < lowest_entropy:
-            lowest_entropy = len(spot.words)
-            indexes = [i]
-        elif len(spot.words) == lowest_entropy:
-            indexes.append(i)
+            if len(spot.words) == 0:
+                return [], True, False
+            elif len(spot.words) < lowest_entropy:
+                lowest_entropy = len(spot.words)
+                indexes = [i]
+            elif len(spot.words) == lowest_entropy:
+                indexes.append(i)
     return indexes, False, done
 
 def propagate(spots: list[Spot], index: int) -> None:
     stack = [index]
 
     while len(stack) > 0:
-        print(len(stack))
         current_index = stack.pop()
 
         left_index = current_index - 1
@@ -83,8 +86,8 @@ def propagate(spots: list[Spot], index: int) -> None:
             new_count = len(spots[left_index].words)
             updated = previous_count != new_count
 
-            # if updated and left_index not in stack:
-            #     stack.append(left_index)
+            if updated and left_index not in stack:
+                stack.append(left_index)
         
         right_index = current_index + 1
         if right_index < len(spots) - 1:
@@ -93,8 +96,8 @@ def propagate(spots: list[Spot], index: int) -> None:
             new_count = len(spots[right_index].words)
             updated = previous_count != new_count
 
-            # if updated and right_index not in stack:
-            #     stack.append(right_index)
+            if updated and right_index not in stack:
+                stack.append(right_index)
 
 def iterate(spots: list[Spot]) -> None:
     lowest_indexes = lowest_entropy_indexes(spots)
@@ -125,20 +128,21 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
 
     filtered_words = []
     for word_string in word_strings:
+        word_string = word_string.strip()
+
         if word_string == "":
             continue
         
         # wsn = word string no
-        wsn_apostrophe = word_string.replace("'", "").replace("’", "")
-        wsn_comma = wsn_apostrophe.replace(",", "")
-        wsn_nothing = wsn_comma.replace("-", "").replace("—", "").replace(".", "")
+        wsn_apostrophe = word_string.replace("'", "").replace("’", "").strip()
+        wsn_comma = wsn_apostrophe.replace(",", "").strip()
+        wsn_nothing = wsn_comma.replace("-", "").replace("—", "").strip(".").strip()
 
         if wsn_nothing.isalpha():
             if wsn_apostrophe.endswith("."):
                 filtered_words.append(wsn_apostrophe[:-1])
-                print(wsn_apostrophe[:-1])
                 filtered_words.append(".")
-            if word_string.endswith(","):
+            elif word_string.endswith(","):
                 filtered_words.append(wsn_apostrophe[:-1])
             else:
                 filtered_words.append(wsn_apostrophe)
@@ -186,11 +190,6 @@ def main() -> None:
     words, word_strs = read_words(FILENAME)
     print("Words read")
 
-    for word in words:
-        # print(word, "\n")
-        if "." in word.left_allowed:
-            print(word, "\n")
-
     spots: list[Spot] = []
     for _ in range(OUTPUT_LENGTH):
         spot = Spot()
@@ -208,12 +207,19 @@ def main() -> None:
     spots[-1].update()
 
 
-    # for i in range(1):
-    #     print(f"Iteration {i}")
+    propagate(spots, 0)
+    print(" ".join([str(spot) for spot in spots]))
 
-    #     iterate(spots)
+    propagate(spots, len(spots) - 1)
+    print(" ".join([str(spot) for spot in spots]))
+
+
+    for i in range(5):
+        print(f"Iteration {i}")
+
+        iterate(spots)
         
-    #     print(" ".join([str(spot) for spot in spots]))
+        print(" ".join([str(spot) for spot in spots]))
 
     
 
