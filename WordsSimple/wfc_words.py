@@ -130,14 +130,19 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
             continue
         
         # wsn = word string no
-        wsn_apostrophe = word_string.replace("'", "").replace("’", "").strip()
-        wsn_comma = wsn_apostrophe.replace(",", "").strip()
-        wsn_nothing = wsn_comma.replace("-", "").replace("—", "").strip(".").strip()
+        wsn_apostrophe = word_string.strip("'’").strip()
+        wsn_comma = wsn_apostrophe.strip(",").strip()
+        wsn_nothing = wsn_comma.strip("-—.").strip()
+
+        to_remove = "'’,-—."
+        removed = wsn_nothing
+        for char in to_remove:
+            removed = removed.replace(char, "")
 
         # if "s" in wsn_nothing:
         #     continue
 
-        if wsn_nothing.isalpha():
+        if removed.isalpha():
             if wsn_apostrophe.endswith("."):
                 filtered_words.append(wsn_apostrophe[:-1])
                 filtered_words.append(".")
