@@ -3,15 +3,16 @@ from __future__ import annotations
 import random
 import copy
 
+N: int = 2
+
 class Word:
-    def __init__(self, word: str, word_weight: int, left_allowed: list[str], right_allowed: list[str]):
+    def __init__(self, word: str, word_weight: int, allowed: dict[int, list[str]]):
         self.word: str = word
         self.word_weight: int = word_weight
-        self.left_allowed: list[str] = left_allowed
-        self.right_allowed: list[str] = right_allowed
+        self.allowed: dict[int, list[str]] = allowed
 
     def __str__(self) -> str:
-        return f"{self.word} ({self.word_weight}, {self.left_allowed}, {self.right_allowed})"
+        return f"{self.word} ({self.word_weight}, {self.allowed})"
 
 
 class Spot:
@@ -29,30 +30,43 @@ class Spot:
         self.words.append(word)
 
     def random_weighted_word(self) -> Word:
-        # return random.choices(self.words, weights=[word.word_weight for word in self.words], k=1)[0]
-        return random.choices(self.words, k=1)[0]
+        return random.choices(self.words, weights=[word.word_weight for word in self.words], k=1)[0]
+        # return random.choices(self.words, k=1)[0]
 
     def collapse(self):
         self.words = [self.random_weighted_word()]
         self.collapsed = True
 
-    def update(self, left_words: list[Word] | None = None, right_words: list[Word] | None = None) -> bool:
+    # def update(self, left_words: list[Word] | None = None, right_words: list[Word] | None = None) -> bool:
+    #     previous_count = len(self.words)
+
+    #     if left_words is not None:
+    #         left_word_strings = [word.word for word in left_words]
+    #         if not self.collapsed:
+    #             self.words = [word for word in self.words if len([True for allowed_word in word.left_allowed if allowed_word in left_word_strings]) > 0]
+    #     if right_words is not None:
+    #         right_word_strings = [word.word for word in right_words]
+    #         if not self.collapsed:
+    #             self.words = [word for word in self.words if len([True for allowed_word in word.right_allowed if allowed_word in right_word_strings]) > 0]
+
+    #     if len(self.words) == 1:
+    #         self.collapsed = True
+
+    #     return previous_count != len(self.words)
+
+    def update(self, neighbor_words: list[Word], offset: int) -> bool:
+        if self.collapsed:
+            return False
+
         previous_count = len(self.words)
 
-        if left_words is not None:
-            left_word_strings = [word.word for word in left_words]
-            if not self.collapsed:
-                self.words = [word for word in self.words if len([True for allowed_word in word.left_allowed if allowed_word in left_word_strings]) > 0]
-        if right_words is not None:
-            right_word_strings = [word.word for word in right_words]
-            if not self.collapsed:
-                self.words = [word for word in self.words if len([True for allowed_word in word.right_allowed if allowed_word in right_word_strings]) > 0]
+        neighbor_word_strings = [word.word for word in neighbor_words]
+        self.words = [word for word in self.words if len([True for allowed_word in word.allowed[offset] if allowed_word in neighbor_word_strings]) > 0]
 
         if len(self.words) == 1:
             self.collapsed = True
 
         return previous_count != len(self.words)
-        
 
 
 def lowest_entropy_indexes(spots: list[Spot]) -> tuple[list[int], bool, bool]:
@@ -78,20 +92,33 @@ def propagate(spots: list[Spot], index: int) -> None:
 
     while len(stack) > 0:
         current_index = stack.pop()
-
-        left_index = current_index - 1
-        if left_index >= 1:
-            updated = spots[left_index].update(right_words=spots[current_index].words)
-
-            if updated and left_index not in stack:
-                stack.append(left_index)
         
-        right_index = current_index + 1
-        if right_index < len(spots) - 1:
-            updated = spots[right_index].update(left_words=spots[current_index].words)
+        offsets = [i for i in range(-N, N + 1) if i != 0]
+        neighbor_idxs = [current_index + offset for offset in offsets]
 
-            if updated and right_index not in stack:
-                stack.append(right_index)
+        for neighbor_idx, offset in zip(neighbor_idxs, offsets):
+            if neighbor_idx <= 0 or neighbor_idx >= len(spots) - 1:
+                continue
+
+            neighbor_words = spots[neighbor_idx].words
+            updated = spots[neighbor_idx].update(neighbor_words, offset)
+
+            if updated and neighbor_idx not in stack:
+                stack.append(neighbor_idx)
+
+        # left_index = current_index - 1
+        # if left_index >= 1:
+        #     updated = spots[left_index].update(right_words=spots[current_index].words)
+
+        #     if updated and left_index not in stack:
+        #         stack.append(left_index)
+        
+        # right_index = current_index + 1
+        # if right_index < len(spots) - 1:
+        #     updated = spots[right_index].update(left_words=spots[current_index].words)
+
+        #     if updated and right_index not in stack:
+        #         stack.append(right_index)
 
 
 def iterate(spots: list[Spot]) -> tuple[bool, bool]:
@@ -172,16 +199,20 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
     words: list[Word] = []
     for word_comb in all_word_combs:
         if word_comb[0] not in [word.word for word in words]:
-            words.append(Word(word_comb[0], 1, [word_comb[1]], [word_comb[2]]))
+            allowed = {
+                -1: [word_comb[1]],
+                1: [word_comb[2]]
+            }
+            words.append(Word(word_comb[0], 1, allowed))
         else:
             for word in words:
                 if word.word == word_comb[0]:
                     word.word_weight += 1
 
-                    if word_comb[1] not in word.left_allowed:
-                        word.left_allowed.append(word_comb[1])
-                    if word_comb[2] not in word.right_allowed:
-                        word.right_allowed.append(word_comb[2])
+                    if word_comb[1] not in word.allowed[-1]:
+                        word.allowed[-1].append(word_comb[1])
+                    if word_comb[2] not in word.allowed[1]:
+                        word.allowed[1].append(word_comb[2])
     word_strs = [word.word for word in words]
 
     return words, word_strs
@@ -228,7 +259,7 @@ def main() -> None:
         spots.append(spot)
 
 
-    start_word = Word(".", 1, [], word_strs)
+    start_word = Word(".", 1, {1: word_strs})
     spots[0].words = [start_word]
     spots[0].update()
 
