@@ -3,6 +3,9 @@ from __future__ import annotations
 import random
 import copy
 
+FILENAME = "book-database/alice.txt"
+OUTPUT_LENGTH = 20
+
 class Word:
     def __init__(self, word: str, word_weight: int, left_allowed: list[str], right_allowed: list[str]):
         self.word: str = word
@@ -148,6 +151,7 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
                 filtered_words.append(".")
             elif word_string.endswith(","):
                 filtered_words.append(wsn_apostrophe[:-1])
+                filtered_words.append(",")
             else:
                 filtered_words.append(wsn_apostrophe)
 
@@ -203,7 +207,7 @@ def join_spots(spots: list[Spot]) -> str:
 
         if last_word == ".":
             word = word.capitalize()
-        elif word == ".":
+        elif word == "." or word == ",":
             output = output.strip()
         
         output += word + " "
@@ -214,9 +218,6 @@ def join_spots(spots: list[Spot]) -> str:
     return output
 
 def main() -> None:
-    FILENAME = "book-database/alice.txt"
-    OUTPUT_LENGTH = 100
-
     words, word_strs = read_words(FILENAME)
     print("Words read")
 
