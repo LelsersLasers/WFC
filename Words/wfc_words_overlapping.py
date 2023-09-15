@@ -3,7 +3,9 @@ from __future__ import annotations
 import random
 import copy
 
-N: int = 2
+N: int = 1
+FILENAME = "book-database/alice.txt"
+OUTPUT_LENGTH = 10
 
 class Word:
     def __init__(self, word: str, word_weight: int, allowed: dict[int, list[str]]):
@@ -245,9 +247,6 @@ def join_spots(spots: list[Spot]) -> str:
     return output
 
 def main() -> None:
-    FILENAME = "book-database/alice.txt"
-    OUTPUT_LENGTH = 100
-
     words, word_strs = read_words(FILENAME)
     print("Words read")
 
@@ -259,13 +258,13 @@ def main() -> None:
         spots.append(spot)
 
 
-    start_word = Word(".", 1, {1: word_strs})
+    start_word = Word(".", 1, {-1: word_strs})
     spots[0].words = [start_word]
-    spots[0].update()
+    spots[0].collapse()
 
-    end_word = Word(".", 1, word_strs, [])
+    end_word = Word(".", 1, {1: word_strs})
     spots[-1].words = [end_word]
-    spots[-1].update()
+    spots[-1].collapse()
 
 
     propagate(spots, 0)
