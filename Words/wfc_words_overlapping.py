@@ -32,8 +32,8 @@ class Spot:
         self.words.append(word)
 
     def random_weighted_word(self) -> Word:
-        return random.choices(self.words, weights=[word.word_weight for word in self.words], k=1)[0]
-        # return random.choices(self.words, k=1)[0]
+        # return random.choices(self.words, weights=[word.word_weight for word in self.words], k=1)[0]
+        return random.choices(self.words, k=1)[0]
 
     def collapse(self):
         self.words = [self.random_weighted_word()]
@@ -61,8 +61,11 @@ class Spot:
             return False
 
         previous_count = len(self.words)
+        offset = -offset
 
         neighbor_word_strings = [word.word for word in neighbor_words]
+        # print(neighbor_word_strings[:5])
+        # print(self.words[0].allowed[offset][:5])
         self.words = [word for word in self.words if len([True for allowed_word in word.allowed[offset] if allowed_word in neighbor_word_strings]) > 0]
 
         if len(self.words) == 1:
@@ -102,8 +105,9 @@ def propagate(spots: list[Spot], index: int) -> None:
             if neighbor_idx <= 0 or neighbor_idx >= len(spots) - 1:
                 continue
 
-            neighbor_words = spots[neighbor_idx].words
-            updated = spots[neighbor_idx].update(neighbor_words, offset)
+            # neighbor_words = spots[neighbor_idx].words
+            current_words = spots[current_index].words
+            updated = spots[neighbor_idx].update(current_words, offset)
 
             if updated and neighbor_idx not in stack:
                 stack.append(neighbor_idx)
@@ -139,6 +143,7 @@ def rand_from_list(l: list[int]) -> int:
     return l[random.randint(0, len(l) - 1)]
 
 def read_words(filename: str) -> tuple[list[Word], list[str]]:
+    # TODO: use N; filter out 2 of the same words in a row; ?
 
     word_strings: list[str] = []
 
@@ -177,6 +182,7 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
                 filtered_words.append(".")
             elif word_string.endswith(","):
                 filtered_words.append(wsn_apostrophe[:-1])
+                filtered_words.append(",")
             else:
                 filtered_words.append(wsn_apostrophe)
 
@@ -236,7 +242,7 @@ def join_spots(spots: list[Spot]) -> str:
 
         if last_word == ".":
             word = word.capitalize()
-        elif word == ".":
+        elif word == "." or word == ",":
             output = output.strip()
         
         output += word + " "
@@ -266,7 +272,6 @@ def main() -> None:
     spots[-1].words = [end_word]
     spots[-1].collapse()
 
-
     propagate(spots, 0)
     print(join_spots(spots))
 
@@ -278,6 +283,7 @@ def main() -> None:
 
         failed, done = iterate(spots)
         print(join_spots(spots))
+        print("")
 
         if failed:
             print("KNOTTED, RESTARTING\n")
