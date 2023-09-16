@@ -3,9 +3,10 @@ from __future__ import annotations
 import random
 import copy
 
-N: int = 2
+N: int = 3
 FILENAME = "book-database/alice.txt"
-OUTPUT_LENGTH = 10
+OUTPUT_LENGTH = 20
+
 
 class Word:
     def __init__(self, word: str, word_weight: int, allowed: dict[int, list[str]]):
@@ -52,16 +53,19 @@ class Spot:
         offset = -offset
 
         neighbor_word_strings = [word.word for word in neighbor_words]
-        # self.words = [word for word in self.words if len([True for allowed_word in word.allowed[offset] if allowed_word in neighbor_word_strings]) > 0]
-
-        new_words = []
-        for word in self.words:
-            # if len([True for allowed_word in word.allowed[offset] if allowed_word in neighbor_word_strings]) > 0:
-            #     new_words.append(word)
-            if offset in word.allowed.keys():
-                if len([True for allowed_word in word.allowed[offset] if allowed_word in neighbor_word_strings]) > 0:
-                    new_words.append(word)
-        self.words = new_words
+        self.words = [
+            word
+            for word in self.words
+            if offset in word.allowed.keys()
+            and len(
+                [
+                    True
+                    for allowed_word in word.allowed[offset]
+                    if allowed_word in neighbor_word_strings
+                ]
+            )
+            > 0
+        ]
 
         if len(self.words) == 1:
             self.collapsed = True
@@ -92,7 +96,7 @@ def propagate(spots: list[Spot], index: int) -> None:
 
     while len(stack) > 0:
         current_index = stack.pop()
-        
+
         offsets = [i for i in range(-N, N + 1) if i != 0]
         neighbor_idxs = [current_index + offset for offset in offsets]
 
@@ -106,6 +110,8 @@ def propagate(spots: list[Spot], index: int) -> None:
 
             if updated and neighbor_idx not in stack:
                 stack.append(neighbor_idx)
+        
+        print(join_spots(spots))
 
 
 def iterate(spots: list[Spot]) -> tuple[bool, bool]:
@@ -119,11 +125,11 @@ def iterate(spots: list[Spot]) -> tuple[bool, bool]:
     return failed, done
 
 
-
 def rand_from_list(l: list[int]) -> int:
     return l[random.randint(0, len(l) - 1)]
 
-def read_words(filename: str) -> tuple[list[Word], list[str]]:
+
+def read_words(filename: str) -> list[Word]:
     # TODO: use N; filter out 2 of the same words in a row; ?
 
     word_strings: list[str] = []
@@ -136,14 +142,13 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
                 word_split = word_split.lower()
                 word_strings.append(word_split)
 
-
     filtered_words = []
     for word_string in word_strings:
         word_string = word_string.strip()
 
         if word_string == "":
             continue
-        
+
         # wsn = word string no
         wsn_apostrophe = word_string.strip("'’").strip()
         wsn_comma = wsn_apostrophe.strip(",").strip()
@@ -189,7 +194,7 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
                 offset_word = "."
             else:
                 offset_word = filtered_words[neighbor_idx]
-            
+
             tup = (current_word, {offset: [offset_word]})
 
             all_word_combs.append(tup)
@@ -214,9 +219,8 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
                     if allowed_word not in word.allowed[offset]:
                         word.allowed[offset].append(allowed_word)
 
-    word_strs = [word.word for word in words]
+    return words
 
-    return words, word_strs
 
 def create_spots(words: list[Word], length: int) -> list[Spot]:
     spots: list[Spot] = []
@@ -229,6 +233,8 @@ def create_spots(words: list[Word], length: int) -> list[Spot]:
     spots[0].semi_collapse_to_period()
     spots[-1].semi_collapse_to_period()
 
+    print(join_spots(spots))
+
     propagate(spots, 0)
     print(join_spots(spots))
 
@@ -236,6 +242,7 @@ def create_spots(words: list[Word], length: int) -> list[Spot]:
     print(join_spots(spots))
 
     return spots
+
 
 def join_spots(spots: list[Spot]) -> str:
     output = ""
@@ -247,7 +254,7 @@ def join_spots(spots: list[Spot]) -> str:
             word = word.capitalize()
         elif word == "." or word == ",":
             output = output.strip()
-        
+
         output += word + " "
         last_word = word
 
@@ -255,8 +262,9 @@ def join_spots(spots: list[Spot]) -> str:
 
     return output
 
+
 def main() -> None:
-    words, word_strs = read_words(FILENAME)
+    words = read_words(FILENAME)
     print("Words read")
 
     spots = create_spots(words, OUTPUT_LENGTH)
@@ -266,15 +274,12 @@ def main() -> None:
 
         failed, done = iterate(spots)
         print(join_spots(spots))
-        print("")
+        print("\n")
 
         if failed:
             print("KNOTTED, RESTARTING\n")
             spots = create_spots(words, OUTPUT_LENGTH)
             # break
-    
-
-
 
 
 main()

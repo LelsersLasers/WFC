@@ -6,8 +6,11 @@ import copy
 FILENAME = "book-database/alice.txt"
 OUTPUT_LENGTH = 20
 
+
 class Word:
-    def __init__(self, word: str, word_weight: int, left_allowed: list[str], right_allowed: list[str]):
+    def __init__(
+        self, word: str, word_weight: int, left_allowed: list[str], right_allowed: list[str]
+    ):
         self.word: str = word
         self.word_weight: int = word_weight
         self.left_allowed: list[str] = left_allowed
@@ -39,23 +42,46 @@ class Spot:
         self.words = [self.random_weighted_word()]
         self.collapsed = True
 
-    def update(self, left_words: list[Word] | None = None, right_words: list[Word] | None = None) -> bool:
+    def update(
+        self, left_words: list[Word] | None = None, right_words: list[Word] | None = None
+    ) -> bool:
         previous_count = len(self.words)
 
         if left_words is not None:
             left_word_strings = [word.word for word in left_words]
             if not self.collapsed:
-                self.words = [word for word in self.words if len([True for allowed_word in word.left_allowed if allowed_word in left_word_strings]) > 0]
+                self.words = [
+                    word
+                    for word in self.words
+                    if len(
+                        [
+                            True
+                            for allowed_word in word.left_allowed
+                            if allowed_word in left_word_strings
+                        ]
+                    )
+                    > 0
+                ]
         if right_words is not None:
             right_word_strings = [word.word for word in right_words]
             if not self.collapsed:
-                self.words = [word for word in self.words if len([True for allowed_word in word.right_allowed if allowed_word in right_word_strings]) > 0]
+                self.words = [
+                    word
+                    for word in self.words
+                    if len(
+                        [
+                            True
+                            for allowed_word in word.right_allowed
+                            if allowed_word in right_word_strings
+                        ]
+                    )
+                    > 0
+                ]
 
         if len(self.words) == 1:
             self.collapsed = True
 
         return previous_count != len(self.words)
-        
 
 
 def lowest_entropy_indexes(spots: list[Spot]) -> tuple[list[int], bool, bool]:
@@ -88,7 +114,7 @@ def propagate(spots: list[Spot], index: int) -> None:
 
             if updated and left_index not in stack:
                 stack.append(left_index)
-        
+
         right_index = current_index + 1
         if right_index < len(spots) - 1:
             updated = spots[right_index].update(left_words=spots[current_index].words)
@@ -108,9 +134,9 @@ def iterate(spots: list[Spot]) -> tuple[bool, bool]:
     return failed, done
 
 
-
 def rand_from_list(l: list[int]) -> int:
     return l[random.randint(0, len(l) - 1)]
+
 
 def read_words(filename: str) -> tuple[list[Word], list[str]]:
 
@@ -124,14 +150,13 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
                 word_split = word_split.lower()
                 word_strings.append(word_split)
 
-
     filtered_words = []
     for word_string in word_strings:
         word_string = word_string.strip()
 
         if word_string == "":
             continue
-        
+
         # wsn = word string no
         wsn_apostrophe = word_string.strip("'’").strip()
         wsn_comma = wsn_apostrophe.strip(",").strip()
@@ -172,7 +197,6 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
         tup = (current_word, left_word, right_word)
         all_word_combs.append(tup)
 
-    
     words: list[Word] = []
     for word_comb in all_word_combs:
         if word_comb[0] not in [word.word for word in words]:
@@ -190,6 +214,7 @@ def read_words(filename: str) -> tuple[list[Word], list[str]]:
 
     return words, word_strs
 
+
 def create_spots(words: list[Word], length: int) -> list[Spot]:
     spots: list[Spot] = []
     for _ in range(length):
@@ -198,6 +223,7 @@ def create_spots(words: list[Word], length: int) -> list[Spot]:
             spot.add_word(copy.deepcopy(word))
         spots.append(spot)
     return spots
+
 
 def join_spots(spots: list[Spot]) -> str:
     output = ""
@@ -209,13 +235,14 @@ def join_spots(spots: list[Spot]) -> str:
             word = word.capitalize()
         elif word == "." or word == ",":
             output = output.strip()
-        
+
         output += word + " "
         last_word = word
 
     output = output.strip()
 
     return output
+
 
 def main() -> None:
     words, word_strs = read_words(FILENAME)
@@ -228,7 +255,6 @@ def main() -> None:
             spot.add_word(copy.deepcopy(word))
         spots.append(spot)
 
-
     start_word = Word(".", 1, [], word_strs)
     spots[0].words = [start_word]
     spots[0].update()
@@ -236,7 +262,6 @@ def main() -> None:
     end_word = Word(".", 1, word_strs, [])
     spots[-1].words = [end_word]
     spots[-1].update()
-
 
     propagate(spots, 0)
     print(join_spots(spots))
@@ -254,9 +279,6 @@ def main() -> None:
         if failed:
             print("KNOTTED, RESTARTING\n")
             spots = create_spots(words, OUTPUT_LENGTH)
-    
-
-
 
 
 main()
