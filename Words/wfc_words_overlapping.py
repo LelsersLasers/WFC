@@ -130,8 +130,6 @@ def rand_from_list(l: list[int]) -> int:
 
 
 def read_words(filename: str) -> list[Word]:
-    # TODO: use N; filter out 2 of the same words in a row; ?
-
     word_strings: list[str] = []
 
     with open(filename, "r", encoding="utf-8") as file:

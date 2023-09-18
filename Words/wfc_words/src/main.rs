@@ -1,0 +1,390 @@
+use std::collections::HashMap;
+// use weighted_rand::builder::*;
+use rayon::prelude::*;
+
+const N: i32 = 3;
+const OUTPUT_LEN: usize = 20;
+const FILENAME: &str = "../book-database/alice.txt";
+
+#[derive(Clone)]
+struct Word {
+    word: String,
+    word_weight: u32,
+    allowed: HashMap<i32, Vec<String>>,
+}
+
+impl Word {
+    fn new(word: String, allowed: HashMap<i32, Vec<String>>) -> Word {
+        Word {
+            word,
+            word_weight: 1,
+            allowed,
+        }
+    }
+
+    // fn str(&self) -> String {
+    //     format!("{} ({}, {})", self.word, self.word_weight, self.allowed.len())
+    // }
+}
+
+struct Spot {
+    words: Vec<Word>,
+    collapsed: bool,
+}
+
+impl Spot {
+    fn new() -> Spot {
+        Spot {
+            words: Vec::new(),
+            collapsed: false,
+        }
+    }
+
+    fn str(&self) -> String {
+        if self.collapsed {
+            self.words[0].word.clone()
+        } else {
+            format!("{}", self.words.len())
+        }
+    }
+
+    fn add_word(&mut self, word: Word) {
+        self.words.push(word);
+    }
+
+    // fn random_weighted_word(&self) -> usize {
+    //     let weights = self.words.iter().map(|w| w.word_weight).collect::<Vec<u32>>();
+    //     let builder = WalkerTableBuilder::new(&weights);
+    //     let wa_table = builder.build();
+
+    //     wa_table.next()
+    // }
+
+    fn collapse(&mut self) {
+        // let word_index = self.random_weighted_word();
+        let word_index = rand::random::<usize>() % self.words.len();
+        // self.words = vec![self.words[word_index].clone()];
+        // self.collapsed = true;
+
+        self.words = vec![self.words[word_index].clone()];
+        self.collapsed = true;
+    }
+
+    fn semi_collapse_to_period(&mut self) {
+        // let period_words = self.words.iter().filter(|w| w.word == ".").collect::<Vec<&Word>>();
+        self.words = self
+            .words
+            .iter()
+            .filter(|w| w.word == ".")
+            .cloned()
+            .collect::<Vec<Word>>();
+    }
+
+    fn update(&mut self, neighbor_words: &[Word], offset: i32) -> bool {
+        if self.collapsed {
+            return false;
+        }
+
+        let previous_count = self.words.len();
+        let offset = -offset;
+
+        let neighbor_word_strings = neighbor_words
+            .iter()
+            .map(|w| w.word.as_str())
+            .collect::<Vec<&str>>();
+        self.words = self
+            .words
+            .par_iter()
+            .filter(|word| {
+                word.allowed.contains_key(&offset)
+                    && word.allowed[&offset]
+                        .iter()
+                        .any(|w| neighbor_word_strings.contains(&w.as_str()))
+            })
+            .cloned()
+            .collect::<Vec<Word>>();
+
+        let new_count = self.words.len();
+
+        if new_count == 1 {
+            self.collapsed = true;
+        }
+
+        previous_count != new_count
+    }
+}
+
+fn lowest_entropy_indexes(spots: &[Spot]) -> (Vec<usize>, bool, bool) {
+    // let lowest_entropy = spots.iter().map(|s| s.words.len()).min().unwrap();
+    // let lowest_entropy_indexes = spots.iter().enumerate().filter(|(_, s)| s.words.len() == lowest_entropy).map(|(i, _)| i).collect::<Vec<usize>>();
+    // let all_collapsed = spots.iter().all(|s| s.collapsed);
+    // let failed = lowest_entropy == 0;
+
+    // (lowest_entropy_indexes, failed, all_collapsed)
+
+    let mut lowest_entropy = usize::MAX;
+    let mut idxs = Vec::new();
+    let mut done = true;
+
+    for (i, spot) in spots.iter().enumerate() {
+        if spot.collapsed {
+            continue;
+        }
+
+        done = false;
+
+        let len = spot.words.len();
+        if len == 0 {
+            return (Vec::new(), true, false);
+        } else if len < lowest_entropy {
+            lowest_entropy = len;
+            idxs = vec![i];
+        } else if len == lowest_entropy {
+            idxs.push(i);
+        }
+    }
+
+    (idxs, false, done)
+}
+
+fn propagate(spots: &mut Vec<Spot>, index: usize) {
+    let mut stack = vec![index];
+
+    let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+
+    while !stack.is_empty() {
+        let current_index = stack.pop().unwrap();
+        let neighbor_idxs = offsets
+            .iter()
+            .map(|o| current_index as i32 + o)
+            .collect::<Vec<i32>>();
+
+        let current_words = &spots[current_index].words.clone();
+        for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
+            if neighbor_idx < &0 || neighbor_idx > &(spots.len() as i32 - 1) {
+                continue;
+            }
+
+            let neighbor_idx = *neighbor_idx as usize;
+            let updated = spots[neighbor_idx].update(current_words, *offset);
+            if updated && !stack.contains(&neighbor_idx) {
+                stack.push(neighbor_idx);
+            }
+        }
+
+        println!("{}", join_spots(spots));
+    }
+}
+
+fn iterate(spots: &mut Vec<Spot>) -> (bool, bool) {
+    let (lowest_indexes, failed, done) = lowest_entropy_indexes(spots);
+
+    if failed || done {
+        return (failed, done);
+    }
+
+    let lowest_index = lowest_indexes[rand::random::<usize>() % lowest_indexes.len()];
+    spots[lowest_index].collapse();
+    propagate(spots, lowest_index);
+
+    (failed, done)
+}
+
+fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
+    let mut spots = Vec::new();
+
+    for _ in 0..length {
+        let mut spot = Spot::new();
+        for word in &words {
+            spot.add_word(word.clone());
+        }
+        spots.push(spot);
+    }
+
+    spots[0].semi_collapse_to_period();
+    let len = spots.len();
+    spots[len - 1].semi_collapse_to_period();
+
+    println!("{}", join_spots(&spots));
+
+    propagate(&mut spots, 0);
+    println!("{}", join_spots(&spots));
+
+    propagate(&mut spots, len - 1);
+    println!("{}", join_spots(&spots));
+
+    spots
+}
+
+fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    }
+}
+
+fn join_spots(spots: &Vec<Spot>) -> String {
+    let mut output = String::new();
+    let last_word = "";
+
+    for spot in spots {
+        let mut text = spot.str();
+
+        if last_word == "." {
+            text = capitalize(&text);
+        } else if text == "." || text == "," {
+            text = text.trim().to_string()
+        }
+
+        output.push(' ');
+        output.push_str(&text);
+    }
+
+    output.trim().to_string()
+}
+
+fn read_words(filename: &str) -> Vec<Word> {
+    let mut word_strings = Vec::new();
+
+    let contents =
+        std::fs::read_to_string(filename).expect("Something went wrong reading the file");
+
+    for line in contents.lines() {
+        for word in line.split_whitespace() {
+            word_strings.push(word.to_lowercase());
+        }
+    }
+
+    let mut filtered_words = Vec::new();
+
+    for word_string in word_strings.iter() {
+        let word_string = word_string.trim();
+
+        if word_string.is_empty() {
+            continue;
+        }
+
+        let wsn_apostrophe = word_string.trim_matches('\'').trim();
+        let wsn_comma = wsn_apostrophe.trim_matches(',').trim();
+        let wsn_nothing = wsn_comma
+            .trim_matches('-')
+            .trim_matches('—')
+            .trim_matches('.')
+            .trim();
+
+        let to_remove = "'’,-—.";
+        let mut removed = wsn_nothing.to_string();
+
+        for char in to_remove.chars() {
+            removed = removed.replace(char, "");
+        }
+
+        if removed.chars().all(|c| c.is_alphabetic()) {
+            if wsn_apostrophe.ends_with('.') {
+                if let Some(stripped) = wsn_apostrophe.strip_suffix('.') {
+                    filtered_words.push(stripped.to_string());
+                }
+                // filtered_words.push(wsn_apostrophe[..wsn_apostrophe.len() - 1].to_string());
+                filtered_words.push(".".to_string());
+            } else if word_string.ends_with(',') {
+                if let Some(stripped) = wsn_apostrophe.strip_suffix(',') {
+                    filtered_words.push(stripped.to_string());
+                }
+                // filtered_words.push(wsn_apostrophe[..wsn_apostrophe.len() - 1].to_string());
+                filtered_words.push(",".to_string());
+            } else {
+                filtered_words.push(wsn_apostrophe.to_string());
+            }
+        }
+    }
+
+    let left_word = ".";
+    let current_word = &filtered_words[0];
+    let hashmap = HashMap::from([(-1, vec![left_word.to_string()])]);
+    let word_combo = (current_word, hashmap);
+
+    let mut all_word_combos = vec![word_combo];
+
+    let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+
+    let len = filtered_words.len();
+    let last_word = &filtered_words[len - 1];
+
+    let length_offset = if last_word == "." { 1 } else { 0 };
+
+    for i in 0..len {
+        let current_word = &filtered_words[i];
+
+        let neighbor_idxs = offsets.iter().map(|o| i as i32 + o).collect::<Vec<i32>>();
+        for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
+            if neighbor_idx < &-1 || neighbor_idx > &(len as i32 - length_offset) {
+                continue;
+            }
+
+            let offset_word =
+                if neighbor_idx == &(len as i32 - length_offset) || neighbor_idx == &-1 {
+                    "."
+                } else {
+                    &filtered_words[*neighbor_idx as usize]
+                };
+
+            let hashmap = HashMap::from([(*offset, vec![offset_word.to_string()])]);
+            let word_combo = (current_word, hashmap);
+
+            all_word_combos.push(word_combo);
+        }
+    }
+
+    let mut words = Vec::new();
+    let mut word_strs = Vec::new();
+
+    for (word_str, allowed) in all_word_combos {
+        if !word_strs.contains(word_str) {
+            let word_string = word_str.to_string();
+            let word = Word::new(word_string.clone(), allowed.clone());
+            words.push(word);
+            word_strs.push(word_string);
+        } else {
+            for word in words.iter_mut() {
+                if word.word == *word_str {
+                    word.word_weight += 1;
+
+                    let offset = allowed.keys().next().unwrap();
+                    let allowed_word = &allowed[offset][0];
+
+                    if !word.allowed.contains_key(offset) {
+                        word.allowed.insert(*offset, vec![allowed_word.to_string()]);
+                    } else {
+                        word.allowed
+                            .get_mut(offset)
+                            .unwrap()
+                            .push(allowed_word.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    words
+}
+
+fn main() {
+    let words = read_words(FILENAME);
+    println!("Read {} words", words.len());
+
+    let mut spots = create_spots(words.clone(), OUTPUT_LEN);
+
+    let mut done = false;
+
+    while !done {
+        let (failed, d) = iterate(&mut spots);
+        done = d;
+        println!("{}\n", join_spots(&spots));
+
+        if failed {
+            println!("KNOTTED, RESTARTING\n");
+            spots = create_spots(words.clone(), OUTPUT_LEN);
+        }
+    }
+}
