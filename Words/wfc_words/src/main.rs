@@ -146,14 +146,14 @@ fn lowest_entropy_indexes(spots: &[Spot]) -> (Vec<usize>, bool, bool) {
 fn propagate(spots: &mut Vec<Spot>, index: usize) {
     let mut stack = vec![index];
 
-    let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+    let mut offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+    offsets.sort_by_key(|a| a.abs());
 
     while let Some(current_index) = stack.pop() {
-        let mut neighbor_idxs = offsets
+        let neighbor_idxs = offsets
             .iter()
             .map(|o| current_index as i32 + o)
             .collect::<Vec<i32>>();
-        neighbor_idxs.sort_by_key(|a| (a - current_index as i32).abs());
 
         let current_words = &spots[current_index].words.clone();
         for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {

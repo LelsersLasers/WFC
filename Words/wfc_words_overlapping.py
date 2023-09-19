@@ -106,7 +106,7 @@ def propagate(spots: list[Spot], index: int) -> None:
 
         offsets = [i for i in range(-N, N + 1) if i != 0]
         neighbor_idxs = [current_index + offset for offset in offsets]
-        neighbor_idxs.sort(key=lambda x: abs(x - current_index))
+        # neighbor_idxs.sort(key=lambda x: abs(x - current_index))
 
         current_words = spots[current_index].words
 
