@@ -3,9 +3,9 @@ use std::collections::HashMap;
 use rayon::prelude::*;
 use regex::Regex;
 
-const N: i32 = 5;
+const N: i32 = 2;
 const OUTPUT_LEN: usize = 20;
-const FILENAME: &str = "../book-database/moby-dick.txt";
+const FILENAME: &str = "../book-database/test.txt";
 
 const END_WORD_PUNCTUATION: &str = ".,;!?:-—";
 const OTHER_PUNCTUATION: [&str; 8] = ["'", "’", ")", "(", "[", "]", "{", "}"];
