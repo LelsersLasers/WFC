@@ -1,18 +1,11 @@
 from __future__ import annotations
 
-import re
-
 import random
 import copy
 
 N: int = 2
-FILENAME: str = "book-database/test.txt"
-OUTPUT_LENGTH: int = 5
-
-end_word_punctuation = ".,;!?:-—"
-cap_punctuation = ".!?"
-strip_punctuation = ".,;!?:"
-other_punctuation = ["'", "’", ",", ")", "(", "[", "]", "{", "}"]
+FILENAME = "book-database/alice.txt"
+OUTPUT_LENGTH = 10
 
 
 class Word:
@@ -39,16 +32,16 @@ class Spot:
     def add_word(self, word: Word):
         self.words.append(word)
 
-    def random_word(self) -> Word:
+    def random_weighted_word(self) -> Word:
         # return random.choices(self.words, weights=[word.word_weight for word in self.words], k=1)[0]
         return random.choices(self.words, k=1)[0]
 
     def collapse(self):
-        self.words = [self.random_word()]
+        self.words = [self.random_weighted_word()]
         self.collapsed = True
 
     def semi_collapse_to_period(self):
-        period_words = [word for word in self.words if word.word == "."]
+        period_words = [word for word in self.words if word.word.endswith(".")]
         self.words = period_words
         # self.collapsed = True
 
@@ -106,7 +99,6 @@ def propagate(spots: list[Spot], index: int) -> None:
 
         offsets = [i for i in range(-N, N + 1) if i != 0]
         neighbor_idxs = [current_index + offset for offset in offsets]
-        neighbor_idxs.sort(key=lambda x: abs(x - current_index))
 
         current_words = spots[current_index].words
 
@@ -143,35 +135,43 @@ def read_words(filename: str) -> list[Word]:
     with open(filename, "r", encoding="utf-8") as file:
         for line in file:
             line = line.strip()
-
-            # punctuation_pattern = f'[{re.escape(end_word_punctuation)}]'
-            # word_pattern = r'\b\w+\b'
-            # tokens = re.findall(f'{word_pattern}|{punctuation_pattern}', line)
-
-            punctuation_pattern = f'[{re.escape(end_word_punctuation)}]'
-            word_pattern = r'\b[\w\']+?\b'  # Include the apostrophe in word characters
-            tokens = re.findall(f'{word_pattern}|{punctuation_pattern}', line)
-
-            apostrophe_adjusted_tokens = "090".join(tokens).replace("090'090", "'").split("090")
-
-            word_strings.extend(apostrophe_adjusted_tokens)
+            word_splits = line.split(" ")
+            for word_split in word_splits:
+                # word_split = word_split.lower()
+                word_strings.append(word_split)
 
     filtered_words = []
     for word_string in word_strings:
-        word_string = word_string.strip()
-        word_string = word_string.lower()
+        word_string = word_string.strip().lower()
+        filtered_words.append(word_string)
 
-        if word_string == "":
-            continue
+        # replace all punctuation with periods
+        # punctuation = ";!?"
+        # for char in punctuation:
+        #     word_string = word_string.replace(char, ".")
 
-        skip = False
-        for char in other_punctuation:
-            if char in word_string:
-                skip = True
-                break
+        # if word_string == "":
+        #     continue
 
-        if not skip:
-            filtered_words.append(word_string)
+        # # wsn = word string no
+        # wsn_apostrophe = word_string.strip("'’").strip()
+        # wsn_comma = wsn_apostrophe.strip(",").strip()
+        # wsn_nothing = wsn_comma.strip("-—.").strip()
+
+        # to_remove = "'’,-—."
+        # removed = wsn_nothing
+        # for char in to_remove:
+        #     removed = removed.replace(char, "")
+
+        # if removed.isalpha():
+        #     if wsn_apostrophe.endswith("."):
+        #         filtered_words.append(wsn_apostrophe[:-1])
+        #         filtered_words.append(".")
+        #     elif word_string.endswith(","):
+        #         filtered_words.append(wsn_apostrophe[:-1])
+        #         filtered_words.append(",")
+        #     else:
+        #         filtered_words.append(wsn_apostrophe)
 
     left_word = "."
     current_word = filtered_words[0]
@@ -187,10 +187,6 @@ def read_words(filename: str) -> list[Word]:
         length_offset = 1
 
     for i in range(len(filtered_words)):
-        if i < len(filtered_words) - 1:
-            if filtered_words[i + 1] == "." and filtered_words[i] == ".":
-                print("DOUBLE PERIOD")
-
         current_word = filtered_words[i]
 
         neighbor_idxs = [i + offset for offset in offsets]
@@ -238,29 +234,29 @@ def create_spots(words: list[Word], length: int) -> list[Spot]:
             spot.add_word(copy.deepcopy(word))
         spots.append(spot)
 
-    # spots[0].semi_collapse_to_period()
-    # spots[-1].semi_collapse_to_period()
+    spots[0].semi_collapse_to_period()
+    spots[-1].semi_collapse_to_period()
 
-    # print(join_spots(spots))
+    print(join_spots(spots))
 
-    # propagate(spots, 0)
-    # print(join_spots(spots))
+    propagate(spots, 0)
+    print(join_spots(spots))
 
-    # propagate(spots, len(spots) - 1)
-    # print(join_spots(spots))
+    propagate(spots, len(spots) - 1)
+    print(join_spots(spots))
 
     return spots
 
 
 def join_spots(spots: list[Spot]) -> str:
     output = ""
-    last_word = ""
-    for spot in spots:
+    last_word = "."
+    for spot in spots[1:]:
         word = str(spot)
 
-        if last_word in cap_punctuation:
+        if "." in last_word:
             word = word.capitalize()
-        if word in strip_punctuation:
+        elif "." in word or "," in word:
             output = output.strip()
 
         output += word + " "

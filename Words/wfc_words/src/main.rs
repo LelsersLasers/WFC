@@ -1,10 +1,14 @@
 use std::collections::HashMap;
 // use weighted_rand::builder::*;
 use rayon::prelude::*;
+use regex::Regex;
 
-const N: i32 = 1;
-const OUTPUT_LEN: usize = 10;
-const FILENAME: &str = "../book-database/alice.txt";
+const N: i32 = 5;
+const OUTPUT_LEN: usize = 5;
+const FILENAME: &str = "../book-database/test.txt";
+
+const END_WORD_PUNCTUATION: &str = ".,;!?:-—";
+const OTHER_PUNCTUATION: [&str; 9] = ["'", "’", ",", ")", "(", "[", "]", "{", "}"];
 
 #[derive(Clone)]
 struct Word {
@@ -71,7 +75,6 @@ impl Spot {
     }
 
     fn semi_collapse_to_period(&mut self) {
-        // let period_words = self.words.iter().filter(|w| w.word == ".").collect::<Vec<&Word>>();
         self.words = self
             .words
             .iter()
@@ -115,13 +118,6 @@ impl Spot {
 }
 
 fn lowest_entropy_indexes(spots: &[Spot]) -> (Vec<usize>, bool, bool) {
-    // let lowest_entropy = spots.iter().map(|s| s.words.len()).min().unwrap();
-    // let lowest_entropy_indexes = spots.iter().enumerate().filter(|(_, s)| s.words.len() == lowest_entropy).map(|(i, _)| i).collect::<Vec<usize>>();
-    // let all_collapsed = spots.iter().all(|s| s.collapsed);
-    // let failed = lowest_entropy == 0;
-
-    // (lowest_entropy_indexes, failed, all_collapsed)
-
     let mut lowest_entropy = usize::MAX;
     let mut idxs = Vec::new();
     let mut done = true;
@@ -153,10 +149,11 @@ fn propagate(spots: &mut Vec<Spot>, index: usize) {
     let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
 
     while let Some(current_index) = stack.pop() {
-        let neighbor_idxs = offsets
+        let mut neighbor_idxs = offsets
             .iter()
             .map(|o| current_index as i32 + o)
             .collect::<Vec<i32>>();
+        neighbor_idxs.sort_by_key(|a| (a - current_index as i32).abs());
 
         let current_words = &spots[current_index].words.clone();
         for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
@@ -201,17 +198,17 @@ fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
         spots.push(spot);
     }
 
-    spots[0].semi_collapse_to_period();
-    let len = spots.len();
-    spots[len - 1].semi_collapse_to_period();
+    // spots[0].semi_collapse_to_period();
+    // let len = spots.len();
+    // spots[len - 1].semi_collapse_to_period();
 
-    println!("{}", join_spots(&spots));
+    // println!("{}", join_spots(&spots));
 
-    propagate(&mut spots, 0);
-    println!("{}", join_spots(&spots));
+    // propagate(&mut spots, 0);
+    // println!("{}", join_spots(&spots));
 
-    propagate(&mut spots, len - 1);
-    println!("{}", join_spots(&spots));
+    // propagate(&mut spots, len - 1);
+    // println!("{}", join_spots(&spots));
 
     spots
 }
@@ -259,57 +256,50 @@ fn read_words(filename: &str) -> Vec<Word> {
     let contents =
         std::fs::read_to_string(filename).expect("Something went wrong reading the file");
 
+    // with open(filename, "r", encoding="utf-8") as file:
+    //     for line in file:
+    //         line = line.strip()
+
+    //         punctuation_pattern = f'[{re.escape(end_word_punctuation)}]'
+    //         word_pattern = r'\b[\w\']+?\b'  # Include the apostrophe in word characters
+    //         tokens = re.findall(f'{word_pattern}|{punctuation_pattern}', line)
+
+    //         apostrophe_adjusted_tokens = "090".join(tokens).replace("090'090", "'").split("090")
+
+    //         word_strings.extend(apostrophe_adjusted_tokens)
+
     for line in contents.lines() {
-        for word in line.split_whitespace() {
-            word_strings.push(word.to_lowercase());
-        }
-    }
+        let line = line.trim();
+        let punctuation_pattern = format!("[{}]", regex::escape(END_WORD_PUNCTUATION));
+        let word_pattern = r"\b[\w\']+?\b"; // Include the apostrophe in word characters
+        let re = Regex::new(&format!("{}|{}", word_pattern, punctuation_pattern)).unwrap();
+        let tokens: Vec<&str> = re.find_iter(line).map(|m| m.as_str()).collect();
 
-    let mut filtered_words = Vec::new();
+        let joined = tokens.join("090");
+        let replaced = joined.replace("090'090", "'");
+        let apostrophe_adjusted_tokens = replaced.split("090");
 
-    for word_string in word_strings.iter() {
-        let word_string = word_string.trim();
+        for token in apostrophe_adjusted_tokens {
+            let word_string = token.trim().to_lowercase();
 
-        if word_string.is_empty() {
-            continue;
-        }
-
-        let wsn_apostrophe = word_string.trim_matches('\'').trim();
-        let wsn_comma = wsn_apostrophe.trim_matches(',').trim();
-        let wsn_nothing = wsn_comma
-            .trim_matches('-')
-            .trim_matches('—')
-            .trim_matches('.')
-            .trim();
-
-        let to_remove = "'’,-—.";
-        let mut removed = wsn_nothing.to_string();
-
-        for char in to_remove.chars() {
-            removed = removed.replace(char, "");
-        }
-
-        if removed.chars().all(|c| c.is_alphabetic()) {
-            if wsn_apostrophe.ends_with('.') {
-                if let Some(stripped) = wsn_apostrophe.strip_suffix('.') {
-                    filtered_words.push(stripped.to_string());
+            if !word_string.is_empty() {
+                let mut skip = false;
+                for char in OTHER_PUNCTUATION.iter() {
+                    if word_string.contains(char) {
+                        skip = true;
+                        break;
+                    }
                 }
-                // filtered_words.push(wsn_apostrophe[..wsn_apostrophe.len() - 1].to_string());
-                filtered_words.push(".".to_string());
-            } else if word_string.ends_with(',') {
-                if let Some(stripped) = wsn_apostrophe.strip_suffix(',') {
-                    filtered_words.push(stripped.to_string());
+
+                if !skip {
+                    word_strings.push(word_string.to_string());
                 }
-                // filtered_words.push(wsn_apostrophe[..wsn_apostrophe.len() - 1].to_string());
-                filtered_words.push(",".to_string());
-            } else {
-                filtered_words.push(wsn_apostrophe.to_string());
             }
         }
     }
 
     let left_word = ".";
-    let current_word = &filtered_words[0];
+    let current_word = &word_strings[0];
     let hashmap = HashMap::from([(-1, vec![left_word.to_string()])]);
     let word_combo = (current_word, hashmap);
 
@@ -317,13 +307,13 @@ fn read_words(filename: &str) -> Vec<Word> {
 
     let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
 
-    let len = filtered_words.len();
-    let last_word = &filtered_words[len - 1];
+    let len = word_strings.len();
+    let last_word = &word_strings[len - 1];
 
     let length_offset = if last_word == "." { 1 } else { 0 };
 
     for i in 0..len {
-        let current_word = &filtered_words[i];
+        let current_word = &word_strings[i];
 
         let neighbor_idxs = offsets.iter().map(|o| i as i32 + o).collect::<Vec<i32>>();
         for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
@@ -335,7 +325,7 @@ fn read_words(filename: &str) -> Vec<Word> {
                 if neighbor_idx == &(len as i32 - length_offset) || neighbor_idx == &-1 {
                     "."
                 } else {
-                    &filtered_words[*neighbor_idx as usize]
+                    &word_strings[*neighbor_idx as usize]
                 };
 
             let hashmap = HashMap::from([(*offset, vec![offset_word.to_string()])]);
