@@ -1,18 +1,31 @@
 from __future__ import annotations
 
 import re
-
 import random
 import copy
+import argparse
 
-N: int = 2
-FILENAME: str = "book-database/test.txt"
-OUTPUT_LENGTH: int = 5
+# ---------------------------------------------------------------------------- #
+ap = argparse.ArgumentParser()
 
-end_word_punctuation = ".,;!?:-—"
-cap_punctuation = ".!?"
-strip_punctuation = ".,;!?:"
-other_punctuation = ["'", "’", ",", ")", "(", "[", "]", "{", "}"]
+ap.add_argument("-n", "--n", required=True, type=int, help="N")
+ap.add_argument("-f", "--filename", required=True, type=str, help="Filename")
+ap.add_argument("-l", "--length", required=True, type=int, help="Output length")
+
+args = vars(ap.parse_args())
+
+N: int = args["n"]
+FILENAME: str = args["filename"]
+OUTPUT_LENGTH: int = args["length"]
+# ---------------------------------------------------------------------------- #
+
+
+# ---------------------------------------------------------------------------- #
+END_WORD_PUNCTUATION = ".,;!?:-—"
+CAP_PUNCTUATION = ".!?"
+STRIP_PUNCTUATION = ".,;!?:"
+BAD_PUNCTUATION = ["'", "’", ")", "(", "[", "]", "{", "}"]
+# ---------------------------------------------------------------------------- #
 
 
 class Word:
@@ -118,7 +131,7 @@ def propagate(spots: list[Spot], index: int) -> None:
 
             if updated and neighbor_idx not in stack:
                 stack.append(neighbor_idx)
-        
+
         print(join_spots(spots) + "   " + str(len(stack)) + ": " + str(stack))
 
 
@@ -148,9 +161,9 @@ def read_words(filename: str) -> list[Word]:
             # word_pattern = r'\b\w+\b'
             # tokens = re.findall(f'{word_pattern}|{punctuation_pattern}', line)
 
-            punctuation_pattern = f'[{re.escape(end_word_punctuation)}]'
-            word_pattern = r'\b[\w\']+?\b'  # Include the apostrophe in word characters
-            tokens = re.findall(f'{word_pattern}|{punctuation_pattern}', line)
+            punctuation_pattern = f"[{re.escape(END_WORD_PUNCTUATION)}]"
+            word_pattern = r"\b[\w\']+?\b"  # Include the apostrophe in word characters
+            tokens = re.findall(f"{word_pattern}|{punctuation_pattern}", line)
 
             apostrophe_adjusted_tokens = "090".join(tokens).replace("090'090", "'").split("090")
 
@@ -165,7 +178,7 @@ def read_words(filename: str) -> list[Word]:
             continue
 
         skip = False
-        for char in other_punctuation:
+        for char in BAD_PUNCTUATION:
             if char in word_string:
                 skip = True
                 break
@@ -187,10 +200,6 @@ def read_words(filename: str) -> list[Word]:
         length_offset = 1
 
     for i in range(len(filtered_words)):
-        if i < len(filtered_words) - 1:
-            if filtered_words[i + 1] == "." and filtered_words[i] == ".":
-                print("DOUBLE PERIOD")
-
         current_word = filtered_words[i]
 
         neighbor_idxs = [i + offset for offset in offsets]
@@ -238,16 +247,16 @@ def create_spots(words: list[Word], length: int) -> list[Spot]:
             spot.add_word(copy.deepcopy(word))
         spots.append(spot)
 
-    # spots[0].semi_collapse_to_period()
-    # spots[-1].semi_collapse_to_period()
+    spots[0].semi_collapse_to_period()
+    spots[-1].semi_collapse_to_period()
 
-    # print(join_spots(spots))
+    print(join_spots(spots))
 
-    # propagate(spots, 0)
-    # print(join_spots(spots))
+    propagate(spots, 0)
+    print(join_spots(spots))
 
-    # propagate(spots, len(spots) - 1)
-    # print(join_spots(spots))
+    propagate(spots, len(spots) - 1)
+    print(join_spots(spots))
 
     return spots
 
@@ -258,9 +267,9 @@ def join_spots(spots: list[Spot]) -> str:
     for spot in spots:
         word = str(spot)
 
-        if last_word in cap_punctuation:
+        if last_word in CAP_PUNCTUATION:
             word = word.capitalize()
-        if word in strip_punctuation:
+        if word in STRIP_PUNCTUATION:
             output = output.strip()
 
         output += word + " "

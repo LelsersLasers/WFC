@@ -4,11 +4,13 @@ use rayon::prelude::*;
 use regex::Regex;
 
 const N: i32 = 5;
-const OUTPUT_LEN: usize = 5;
-const FILENAME: &str = "../book-database/test.txt";
+const OUTPUT_LEN: usize = 20;
+const FILENAME: &str = "../book-database/moby-dick.txt";
 
 const END_WORD_PUNCTUATION: &str = ".,;!?:-—";
-const OTHER_PUNCTUATION: [&str; 9] = ["'", "’", ",", ")", "(", "[", "]", "{", "}"];
+const OTHER_PUNCTUATION: [&str; 8] = ["'", "’", ")", "(", "[", "]", "{", "}"];
+const CAP_PUNCTUATION: &str = ".!?";
+const STRIP_PUNCTUATION: &str = ".,;!?:";
 
 #[derive(Clone)]
 struct Word {
@@ -92,7 +94,7 @@ impl Spot {
         let offset = -offset;
 
         let neighbor_word_strings = neighbor_words
-            .iter()
+            .par_iter()
             .map(|w| w.word.as_str())
             .collect::<Vec<&str>>();
         self.words = self
@@ -198,17 +200,17 @@ fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
         spots.push(spot);
     }
 
-    // spots[0].semi_collapse_to_period();
-    // let len = spots.len();
-    // spots[len - 1].semi_collapse_to_period();
+    spots[0].semi_collapse_to_period();
+    let len = spots.len();
+    spots[len - 1].semi_collapse_to_period();
 
-    // println!("{}", join_spots(&spots));
+    println!("{}", join_spots(&spots));
 
-    // propagate(&mut spots, 0);
-    // println!("{}", join_spots(&spots));
+    propagate(&mut spots, 0);
+    println!("{}", join_spots(&spots));
 
-    // propagate(&mut spots, len - 1);
-    // println!("{}", join_spots(&spots));
+    propagate(&mut spots, len - 1);
+    println!("{}", join_spots(&spots));
 
     spots
 }
@@ -235,14 +237,15 @@ fn join_spots(spots: &Vec<Spot>) -> String {
     for spot in spots {
         let mut text = spot.str();
 
-        if last_word == "." {
+        if CAP_PUNCTUATION.contains(last_word.as_str()) {
             text = capitalize(&text);
-        } else if text == "." || text == "," {
-            output = output.trim().to_string()
+        }
+        if STRIP_PUNCTUATION.contains(text.as_str()) {
+            output = output.trim().to_string();
         }
 
-        output.push(' ');
         output.push_str(&text);
+        output.push(' ');
 
         last_word = text;
     }
@@ -255,18 +258,6 @@ fn read_words(filename: &str) -> Vec<Word> {
 
     let contents =
         std::fs::read_to_string(filename).expect("Something went wrong reading the file");
-
-    // with open(filename, "r", encoding="utf-8") as file:
-    //     for line in file:
-    //         line = line.strip()
-
-    //         punctuation_pattern = f'[{re.escape(end_word_punctuation)}]'
-    //         word_pattern = r'\b[\w\']+?\b'  # Include the apostrophe in word characters
-    //         tokens = re.findall(f'{word_pattern}|{punctuation_pattern}', line)
-
-    //         apostrophe_adjusted_tokens = "090".join(tokens).replace("090'090", "'").split("090")
-
-    //         word_strings.extend(apostrophe_adjusted_tokens)
 
     for line in contents.lines() {
         let line = line.trim();

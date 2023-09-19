@@ -3,11 +3,9 @@ import re
 end_word_punctuation = ".,;!?:-—"
 
 line = """
-Alice looked down at them, and considered a little before she gave her
-answer. 'They're done with blacking, I believe.'
-
-'Boots and shoes under the sea,' the Gryphon went on in a deep voice,
-'are done with a whiting. Now you know.'"""
+At this the whole pack rose up into the air, and came flying down upon
+her: she gave a little scream, half of fright and half of anger, and
+tried to beat them off, and found herself lying on the bank"""
 
 punctuation_pattern = f'[{re.escape(end_word_punctuation)}]'
 word_pattern = r'\b[\w\']+?\b'  # Include the apostrophe in word characters
