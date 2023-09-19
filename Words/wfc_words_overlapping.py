@@ -144,6 +144,11 @@ def read_words(filename: str) -> list[Word]:
     for word_string in word_strings:
         word_string = word_string.strip()
 
+        # replace all punctuation with periods
+        punctuation = ";!?"
+        for char in punctuation:
+            word_string = word_string.replace(char, ".")
+
         if word_string == "":
             continue
 
