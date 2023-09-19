@@ -2,8 +2,8 @@ use std::collections::HashMap;
 // use weighted_rand::builder::*;
 use rayon::prelude::*;
 
-const N: i32 = 3;
-const OUTPUT_LEN: usize = 20;
+const N: i32 = 1;
+const OUTPUT_LEN: usize = 10;
 const FILENAME: &str = "../book-database/alice.txt";
 
 #[derive(Clone)]
@@ -152,8 +152,7 @@ fn propagate(spots: &mut Vec<Spot>, index: usize) {
 
     let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
 
-    while !stack.is_empty() {
-        let current_index = stack.pop().unwrap();
+    while let Some(current_index) = stack.pop() {
         let neighbor_idxs = offsets
             .iter()
             .map(|o| current_index as i32 + o)
@@ -172,7 +171,8 @@ fn propagate(spots: &mut Vec<Spot>, index: usize) {
             }
         }
 
-        println!("{}", join_spots(spots));
+        print!("{}   ", join_spots(spots));
+        println!("{}: {:?}", stack.len(), stack);
     }
 }
 
@@ -217,16 +217,23 @@ fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
 }
 
 fn capitalize(s: &str) -> String {
-    let mut c = s.chars();
-    match c.next() {
-        None => String::new(),
-        Some(f) => f.to_uppercase().collect::<String>() + c.as_str(),
+    if s.is_empty() {
+        return String::from("");
+    }
+
+    let mut chars = s.chars();
+    if let Some(first_char) = chars.next() {
+        let capitalized = first_char.to_uppercase().collect::<String>();
+        let rest = chars.collect::<String>();
+        capitalized + &rest
+    } else {
+        String::from("")
     }
 }
 
 fn join_spots(spots: &Vec<Spot>) -> String {
     let mut output = String::new();
-    let last_word = "";
+    let mut last_word = String::from(".");
 
     for spot in spots {
         let mut text = spot.str();
@@ -234,11 +241,13 @@ fn join_spots(spots: &Vec<Spot>) -> String {
         if last_word == "." {
             text = capitalize(&text);
         } else if text == "." || text == "," {
-            text = text.trim().to_string()
+            output = output.trim().to_string()
         }
 
         output.push(' ');
         output.push_str(&text);
+
+        last_word = text;
     }
 
     output.trim().to_string()

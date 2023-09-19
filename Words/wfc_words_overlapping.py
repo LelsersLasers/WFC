@@ -3,9 +3,9 @@ from __future__ import annotations
 import random
 import copy
 
-N: int = 3
+N: int = 2
 FILENAME = "book-database/alice.txt"
-OUTPUT_LENGTH = 20
+OUTPUT_LENGTH = 10
 
 
 class Word:
@@ -111,7 +111,7 @@ def propagate(spots: list[Spot], index: int) -> None:
             if updated and neighbor_idx not in stack:
                 stack.append(neighbor_idx)
         
-        print(join_spots(spots))
+        print(join_spots(spots) + "   " + str(len(stack)) + ": " + str(stack))
 
 
 def iterate(spots: list[Spot]) -> tuple[bool, bool]:
@@ -213,7 +213,7 @@ def read_words(filename: str) -> list[Word]:
                     allowed_word = allowed[offset][0]
 
                     if offset not in word.allowed.keys():
-                        word.allowed[offset] = []
+                        word.allowed[offset] = [allowed_word]
                     if allowed_word not in word.allowed[offset]:
                         word.allowed[offset].append(allowed_word)
 
