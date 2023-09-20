@@ -47,7 +47,7 @@ impl Spot {
     }
 
     fn str(&self) -> String {
-        if self.collapsed {
+        if self.collapsed && !self.words.is_empty() {
             self.words[0].word.clone()
         } else {
             format!("{}", self.words.len())
@@ -86,9 +86,9 @@ impl Spot {
     }
 
     fn update(&mut self, neighbor_words: &[Word], offset: i32) -> bool {
-        if self.collapsed {
-            return false;
-        }
+        // if self.collapsed {
+        //     return false;
+        // }
 
         let previous_count = self.words.len();
         let offset = -offset;
@@ -125,20 +125,32 @@ fn lowest_entropy_indexes(spots: &[Spot]) -> (Vec<usize>, bool, bool) {
     let mut done = true;
 
     for (i, spot) in spots.iter().enumerate() {
-        if spot.collapsed {
-            continue;
-        }
-
-        done = false;
-
         let len = spot.words.len();
+
         if len == 0 {
             return (Vec::new(), true, false);
-        } else if len < lowest_entropy {
-            lowest_entropy = len;
-            idxs = vec![i];
-        } else if len == lowest_entropy {
-            idxs.push(i);
+        }
+
+        if !spot.collapsed {
+            done = false;
+
+            match len.cmp(&lowest_entropy) {
+                std::cmp::Ordering::Less => {
+                    lowest_entropy = len;
+                    idxs = vec![i];
+                }
+                std::cmp::Ordering::Equal => {
+                    idxs.push(i);
+                }
+                std::cmp::Ordering::Greater => {}
+            }
+
+            // if len < lowest_entropy {
+            //     lowest_entropy = len;
+            //     idxs = vec![i];
+            // } else if len == lowest_entropy {
+            //     idxs.push(i);
+            // }
         }
     }
 

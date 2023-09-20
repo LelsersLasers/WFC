@@ -18,7 +18,9 @@ args = vars(ap.parse_args())
 N: int = args["n"]
 FILENAME: str = args["filename"]
 OUTPUT_LENGTH: int | None = args["length"] if args["length"] is None else int(args["length"])
-MIN_OUTPUT_LENGTH: int | None = args["min_length"] if args["min_length"] is None else int(args["min_length"])
+MIN_OUTPUT_LENGTH: int | None = (
+    args["min_length"] if args["min_length"] is None else int(args["min_length"])
+)
 # ---------------------------------------------------------------------------- #
 
 
@@ -46,7 +48,7 @@ class Spot:
         self.collapsed: bool = False
 
     def __str__(self) -> str:
-        if self.collapsed:
+        if self.collapsed and len(self.words) > 0:
             return self.words[0].word
         else:
             return str(len(self.words))
@@ -68,8 +70,8 @@ class Spot:
         # self.collapsed = True
 
     def update(self, neighbor_words: list[Word], offset: int) -> bool:
-        if self.collapsed:
-            return False
+        # if self.collapsed:
+        #     return False
 
         previous_count = len(self.words)
         offset = -offset
@@ -100,16 +102,18 @@ def lowest_entropy_indexes(spots: list[Spot]) -> tuple[list[int], bool, bool]:
     indexes = []
     done = True
     for i, spot in enumerate(spots):
+        if len(spot.words) == 0:
+            return [], True, False
+
         if not spot.collapsed:
             done = False
 
-            if len(spot.words) == 0:
-                return [], True, False
-            elif len(spot.words) < lowest_entropy:
+            if len(spot.words) < lowest_entropy:
                 lowest_entropy = len(spot.words)
                 indexes = [i]
             elif len(spot.words) == lowest_entropy:
                 indexes.append(i)
+
     return indexes, False, done
 
 
@@ -138,7 +142,9 @@ def propagate(spots: list[Spot], index: int) -> None:
         print(join_spots(spots) + "   " + str(len(stack)) + ": " + str(stack))
 
 
-def iterate(spots: list[Spot], words: list[Word], max_len: int | None) -> tuple[bool, bool, int | None]:
+def iterate(
+    spots: list[Spot], words: list[Word], max_len: int | None
+) -> tuple[bool, bool, int | None]:
     lowest_indexes, failed, done = lowest_entropy_indexes(spots)
 
     if len(lowest_indexes) > 0:
@@ -153,7 +159,12 @@ def iterate(spots: list[Spot], words: list[Word], max_len: int | None) -> tuple[
 
             if max_len is None:
                 for i, spot in enumerate(spots):
-                    if spot.collapsed and i >= MIN_OUTPUT_LENGTH and spot.words[0].word in CAP_PUNCTUATION:
+                    if (
+                        spot.collapsed
+                        and len(spot.words) > 0
+                        and i >= MIN_OUTPUT_LENGTH
+                        and spot.words[0].word in CAP_PUNCTUATION
+                    ):
                         max_len = i
             else:
                 for i in range(len(spots) - 1, max_len, -1):
@@ -261,12 +272,13 @@ def create_spot(words: list[Word]) -> Spot:
         spot.add_word(copy.deepcopy(word))
     return spot
 
+
 def create_spots(words: list[Word], length: int | None, min_length: int | None) -> list[Spot]:
     spots: list[Spot] = []
 
     if length is None and min_length is None:
         raise Exception("Must specify length or min_length")
-    
+
     elif length is not None:
         l = length
     elif min_length is not None:
@@ -287,7 +299,6 @@ def create_spots(words: list[Word], length: int | None, min_length: int | None) 
         print(join_spots(spots))
         propagate(spots, len(spots) - 1)
         print(join_spots(spots))
-
 
     return spots
 
