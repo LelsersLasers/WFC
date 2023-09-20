@@ -111,9 +111,9 @@ impl Spot {
 
         let new_count = self.words.len();
 
-        if new_count == 1 {
-            self.collapsed = true;
-        }
+        // if new_count == 1 {
+        //     self.collapsed = true;
+        // }
 
         previous_count != new_count
     }

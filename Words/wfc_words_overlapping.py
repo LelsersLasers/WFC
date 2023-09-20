@@ -10,13 +10,15 @@ ap = argparse.ArgumentParser()
 
 ap.add_argument("-n", "--n", required=True, type=int, help="N")
 ap.add_argument("-f", "--filename", required=True, type=str, help="Filename")
-ap.add_argument("-l", "--length", required=True, type=int, help="Output length")
+ap.add_argument("-l", "--length", required=False, help="Output length")
+ap.add_argument("-m", "--min-length", required=False, help="Output length")
 
 args = vars(ap.parse_args())
 
 N: int = args["n"]
 FILENAME: str = args["filename"]
-OUTPUT_LENGTH: int = args["length"]
+OUTPUT_LENGTH: int | None = args["length"] if args["length"] is None else int(args["length"])
+MIN_OUTPUT_LENGTH: int | None = args["min_length"] if args["min_length"] is None else int(args["min_length"])
 # ---------------------------------------------------------------------------- #
 
 
@@ -87,8 +89,8 @@ class Spot:
             > 0
         ]
 
-        if len(self.words) == 1:
-            self.collapsed = True
+        # if len(self.words) == 1:
+        #     self.collapsed = True
 
         return previous_count != len(self.words)
 
@@ -119,11 +121,12 @@ def propagate(spots: list[Spot], index: int) -> None:
 
         offsets = [i for i in range(-N, N + 1) if i != 0]
         offsets.sort(key=lambda x: abs(x))
-        neighbor_idxs = [current_index + offset for offset in offsets]
+        # neighbor_idxs = [current_index + offset for offset in offsets]
 
         current_words = spots[current_index].words
 
-        for neighbor_idx, offset in zip(neighbor_idxs, offsets):
+        for offset in offsets:
+            neighbor_idx = current_index + offset
             if neighbor_idx < 0 or neighbor_idx > len(spots) - 1:
                 continue
 
@@ -135,15 +138,28 @@ def propagate(spots: list[Spot], index: int) -> None:
         print(join_spots(spots) + "   " + str(len(stack)) + ": " + str(stack))
 
 
-def iterate(spots: list[Spot]) -> tuple[bool, bool]:
+def iterate(spots: list[Spot], words: list[Word], max_len: int | None) -> tuple[bool, bool, int | None]:
     lowest_indexes, failed, done = lowest_entropy_indexes(spots)
 
     if len(lowest_indexes) > 0:
         index = rand_from_list(lowest_indexes)
+
         spots[index].collapse()
         propagate(spots, index)
 
-    return failed, done
+        if MIN_OUTPUT_LENGTH is not None:
+            if index + N >= len(spots) - 1 and max_len is None:
+                spots.append(create_spot(words))
+
+            if max_len is None:
+                for i, spot in enumerate(spots):
+                    if spot.collapsed and i >= MIN_OUTPUT_LENGTH and spot.words[0].word in CAP_PUNCTUATION:
+                        max_len = i
+            else:
+                for i in range(len(spots) - 1, max_len, -1):
+                    spots.pop(i)
+
+    return failed, done, max_len
 
 
 def rand_from_list(l: list[int]) -> int:
@@ -239,24 +255,39 @@ def read_words(filename: str) -> list[Word]:
     return words
 
 
-def create_spots(words: list[Word], length: int) -> list[Spot]:
+def create_spot(words: list[Word]) -> Spot:
+    spot = Spot()
+    for word in words:
+        spot.add_word(copy.deepcopy(word))
+    return spot
+
+def create_spots(words: list[Word], length: int | None, min_length: int | None) -> list[Spot]:
     spots: list[Spot] = []
-    for _ in range(length):
-        spot = Spot()
-        for word in words:
-            spot.add_word(copy.deepcopy(word))
+
+    if length is None and min_length is None:
+        raise Exception("Must specify length or min_length")
+    
+    elif length is not None:
+        l = length
+    elif min_length is not None:
+        l = min_length
+
+    for _ in range(l):
+        spot = create_spot(words)
         spots.append(spot)
 
     spots[0].semi_collapse_to_period()
-    spots[-1].semi_collapse_to_period()
-
     print(join_spots(spots))
 
     propagate(spots, 0)
     print(join_spots(spots))
 
-    propagate(spots, len(spots) - 1)
-    print(join_spots(spots))
+    if min_length is None:
+        spots[-1].semi_collapse_to_period()
+        print(join_spots(spots))
+        propagate(spots, len(spots) - 1)
+        print(join_spots(spots))
+
 
     return spots
 
@@ -284,18 +315,19 @@ def main() -> None:
     words = read_words(FILENAME)
     print("Words read")
 
-    spots = create_spots(words, OUTPUT_LENGTH)
+    spots = create_spots(words, OUTPUT_LENGTH, MIN_OUTPUT_LENGTH)
 
     done = False
+    max_len: int | None = None
     while not done:
-
-        failed, done = iterate(spots)
+        failed, done, max_len = iterate(spots, words, max_len)
         print(join_spots(spots))
         print("\n")
 
         if failed:
             print("KNOTTED, RESTARTING\n")
-            spots = create_spots(words, OUTPUT_LENGTH)
+            spots = create_spots(words, OUTPUT_LENGTH, MIN_OUTPUT_LENGTH)
+            max_len = None
             # break
 
 
