@@ -2,15 +2,33 @@ use std::collections::HashMap;
 // use weighted_rand::builder::*;
 use rayon::prelude::*;
 use regex::Regex;
+use structopt::StructOpt;
 
-const N: i32 = 2;
-const OUTPUT_LEN: usize = 20;
-const FILENAME: &str = "../book-database/test.txt";
+// const N: i32 = 2;
+// const OUTPUT_LEN: usize = 20;
+// const FILENAME: &str = "../book-database/test.txt";
 
 const END_WORD_PUNCTUATION: &str = ".,;!?:-—";
 const OTHER_PUNCTUATION: [&str; 8] = ["'", "’", ")", "(", "[", "]", "{", "}"];
 const CAP_PUNCTUATION: &str = ".!?";
 const STRIP_PUNCTUATION: &str = ".,;!?:";
+
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "WFC Words", about = "Wave Function Collapse for prose")]
+struct Opt {
+    // N
+    #[structopt(short, long)]
+    n: i32,
+
+    // Output length
+    #[structopt(short, long)]
+    length: usize,
+
+    // Filename
+    #[structopt(short, long)]
+    filename: String,
+}
 
 #[derive(Clone)]
 struct Word {
@@ -157,10 +175,10 @@ fn lowest_entropy_indexes(spots: &[Spot]) -> (Vec<usize>, bool, bool) {
     (idxs, false, done)
 }
 
-fn propagate(spots: &mut Vec<Spot>, index: usize) {
+fn propagate(spots: &mut Vec<Spot>, index: usize, n: i32) {
     let mut stack = vec![index];
 
-    let mut offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+    let mut offsets = (-n..n + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
     offsets.sort_by_key(|a| a.abs());
 
     while let Some(current_index) = stack.pop() {
@@ -187,7 +205,7 @@ fn propagate(spots: &mut Vec<Spot>, index: usize) {
     }
 }
 
-fn iterate(spots: &mut Vec<Spot>) -> (bool, bool) {
+fn iterate(spots: &mut Vec<Spot>, n: i32) -> (bool, bool) {
     let (lowest_indexes, failed, done) = lowest_entropy_indexes(spots);
 
     if failed || done {
@@ -196,12 +214,12 @@ fn iterate(spots: &mut Vec<Spot>) -> (bool, bool) {
 
     let lowest_index = lowest_indexes[rand::random::<usize>() % lowest_indexes.len()];
     spots[lowest_index].collapse();
-    propagate(spots, lowest_index);
+    propagate(spots, lowest_index, n);
 
     (failed, done)
 }
 
-fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
+fn create_spots(words: Vec<Word>, length: usize, n: i32) -> Vec<Spot> {
     let mut spots = Vec::new();
 
     for _ in 0..length {
@@ -218,10 +236,10 @@ fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
 
     println!("{}", join_spots(&spots));
 
-    propagate(&mut spots, 0);
+    propagate(&mut spots, 0, n);
     println!("{}", join_spots(&spots));
 
-    propagate(&mut spots, len - 1);
+    propagate(&mut spots, len - 1, n);
     println!("{}", join_spots(&spots));
 
     spots
@@ -265,7 +283,7 @@ fn join_spots(spots: &Vec<Spot>) -> String {
     output.trim().to_string()
 }
 
-fn read_words(filename: &str) -> Vec<Word> {
+fn read_words(filename: &str, n: i32) -> Vec<Word> {
     let mut word_strings = Vec::new();
 
     let contents =
@@ -308,7 +326,7 @@ fn read_words(filename: &str) -> Vec<Word> {
 
     let mut all_word_combos = vec![word_combo];
 
-    let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+    let offsets = (-n..n + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
 
     let len = word_strings.len();
     let last_word = &word_strings[len - 1];
@@ -372,21 +390,23 @@ fn read_words(filename: &str) -> Vec<Word> {
 }
 
 fn main() {
-    let words = read_words(FILENAME);
+    let opt = Opt::from_args();
+
+    let words = read_words(opt.filename.as_str(), opt.n);
     println!("Read {} words", words.len());
 
-    let mut spots = create_spots(words.clone(), OUTPUT_LEN);
+    let mut spots = create_spots(words.clone(), opt.length, opt.n);
 
     let mut done = false;
 
     while !done {
-        let (failed, d) = iterate(&mut spots);
+        let (failed, d) = iterate(&mut spots, opt.n);
         done = d;
         println!("{}\n", join_spots(&spots));
 
         if failed {
             println!("KNOTTED, RESTARTING\n");
-            spots = create_spots(words.clone(), OUTPUT_LEN);
+            spots = create_spots(words.clone(), opt.length, opt.n);
         }
     }
 }
