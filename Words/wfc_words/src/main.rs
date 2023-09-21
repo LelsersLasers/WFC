@@ -94,11 +94,11 @@ impl Spot {
         self.collapsed = true;
     }
 
-    fn semi_collapse_to_period(&mut self) {
+    fn semi_collapse_to_cap_punctuation(&mut self) {
         self.words = self
             .words
             .iter()
-            .filter(|w| w.word == ".")
+            .filter(|w| w.word.len() == 1 && CAP_PUNCTUATION.contains(&w.word))
             .cloned()
             .collect::<Vec<Word>>();
     }
@@ -182,18 +182,19 @@ fn propagate(spots: &mut Vec<Spot>, index: usize, n: i32) {
     offsets.sort_by_key(|a| a.abs());
 
     while let Some(current_index) = stack.pop() {
-        let neighbor_idxs = offsets
-            .iter()
-            .map(|o| current_index as i32 + o)
-            .collect::<Vec<i32>>();
+        // let neighbor_idxs = offsets
+        //     .iter()
+        //     .map(|o| current_index as i32 + o)
+        //     .collect::<Vec<i32>>();
 
         let current_words = &spots[current_index].words.clone();
-        for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
-            if neighbor_idx < &0 || neighbor_idx > &(spots.len() as i32 - 1) {
+        for offset in offsets.iter() {
+            let neighbor_idx = current_index as i32 + offset;
+            if neighbor_idx < 0 || neighbor_idx > spots.len() as i32 - 1 {
                 continue;
             }
 
-            let neighbor_idx = *neighbor_idx as usize;
+            let neighbor_idx = neighbor_idx as usize;
             let updated = spots[neighbor_idx].update(current_words, *offset);
             if updated && !stack.contains(&neighbor_idx) {
                 stack.push(neighbor_idx);
@@ -230,9 +231,9 @@ fn create_spots(words: Vec<Word>, length: usize, n: i32) -> Vec<Spot> {
         spots.push(spot);
     }
 
-    spots[0].semi_collapse_to_period();
+    spots[0].semi_collapse_to_cap_punctuation();
     let len = spots.len();
-    spots[len - 1].semi_collapse_to_period();
+    spots[len - 1].semi_collapse_to_cap_punctuation();
 
     println!("{}", join_spots(&spots));
 
@@ -336,17 +337,18 @@ fn read_words(filename: &str, n: i32) -> Vec<Word> {
     for i in 0..len {
         let current_word = &word_strings[i];
 
-        let neighbor_idxs = offsets.iter().map(|o| i as i32 + o).collect::<Vec<i32>>();
-        for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
-            if neighbor_idx < &-1 || neighbor_idx > &(len as i32 - length_offset) {
+        // let neighbor_idxs = offsets.iter().map(|o| i as i32 + o).collect::<Vec<i32>>();
+        for offset in offsets.iter() {
+            let neighbor_idx = i as i32 + offset;
+            if neighbor_idx < -1 || neighbor_idx > len as i32 - length_offset {
                 continue;
             }
 
             let offset_word =
-                if neighbor_idx == &(len as i32 - length_offset) || neighbor_idx == &-1 {
+                if neighbor_idx == len as i32 - length_offset || neighbor_idx == -1 {
                     "."
                 } else {
-                    &word_strings[*neighbor_idx as usize]
+                    &word_strings[neighbor_idx as usize]
                 };
 
             let hashmap = HashMap::from([(*offset, vec![offset_word.to_string()])]);

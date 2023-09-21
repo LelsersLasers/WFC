@@ -64,8 +64,8 @@ class Spot:
         self.words = [self.random_word()]
         self.collapsed = True
 
-    def semi_collapse_to_period(self):
-        period_words = [word for word in self.words if word.word == "."]
+    def semi_collapse_to_cap_punctuation(self):
+        period_words = [word for word in self.words if len(word.word) == 1 and word.word in CAP_PUNCTUATION]
         self.words = period_words
         # self.collapsed = True
 
@@ -120,11 +120,11 @@ def lowest_entropy_indexes(spots: list[Spot]) -> tuple[list[int], bool, bool]:
 def propagate(spots: list[Spot], index: int) -> None:
     stack = [index]
 
+    offsets = [i for i in range(-N, N + 1) if i != 0]
+    offsets.sort(key=lambda x: abs(x))
+
     while len(stack) > 0:
         current_index = stack.pop()
-
-        offsets = [i for i in range(-N, N + 1) if i != 0]
-        offsets.sort(key=lambda x: abs(x))
         # neighbor_idxs = [current_index + offset for offset in offsets]
 
         current_words = spots[current_index].words
@@ -212,8 +212,6 @@ def read_words(filename: str) -> list[Word]:
 
         if not skip:
             filtered_words.append(word_string)
-        else:
-            filtered_words.append("090")
 
     left_word = "."
     current_word = filtered_words[0]
@@ -230,8 +228,6 @@ def read_words(filename: str) -> list[Word]:
 
     for i in range(len(filtered_words)):
         current_word = filtered_words[i]
-        if current_word == "090":
-            continue
 
         neighbor_idxs = [i + offset for offset in offsets]
         for neighbor_idx, offset in zip(neighbor_idxs, offsets):
@@ -242,21 +238,20 @@ def read_words(filename: str) -> list[Word]:
                 offset_word = "."
             else:
                 offset_word = filtered_words[neighbor_idx]
-            
-            if offset_word == "090":
-                continue
 
             tup = (current_word, {offset: [offset_word]})
 
             all_word_combs.append(tup)
 
     words: list[Word] = []
+    word_strs: list[str] = []
     for word_comb in all_word_combs:
         word_str = word_comb[0]
         allowed = word_comb[1]
 
-        if word_str not in [word.word for word in words]:
+        if word_str not in word_strs:
             words.append(Word(word_str, 1, allowed))
+            word_strs.append(word_str)
         else:
             for word in words:
                 if word.word == word_str:
@@ -295,14 +290,14 @@ def create_spots(words: list[Word], length: int | None, min_length: int | None) 
         spot = create_spot(words)
         spots.append(spot)
 
-    spots[0].semi_collapse_to_period()
+    spots[0].semi_collapse_to_cap_punctuation()
     print(join_spots(spots))
 
     propagate(spots, 0)
     print(join_spots(spots))
 
     if min_length is None:
-        spots[-1].semi_collapse_to_period()
+        spots[-1].semi_collapse_to_cap_punctuation()
         print(join_spots(spots))
         propagate(spots, len(spots) - 1)
         print(join_spots(spots))
