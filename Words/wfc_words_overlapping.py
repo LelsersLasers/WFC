@@ -212,6 +212,8 @@ def read_words(filename: str) -> list[Word]:
 
         if not skip:
             filtered_words.append(word_string)
+        else:
+            filtered_words.append("090")
 
     left_word = "."
     current_word = filtered_words[0]
@@ -228,6 +230,8 @@ def read_words(filename: str) -> list[Word]:
 
     for i in range(len(filtered_words)):
         current_word = filtered_words[i]
+        if current_word == "090":
+            continue
 
         neighbor_idxs = [i + offset for offset in offsets]
         for neighbor_idx, offset in zip(neighbor_idxs, offsets):
@@ -238,6 +242,9 @@ def read_words(filename: str) -> list[Word]:
                 offset_word = "."
             else:
                 offset_word = filtered_words[neighbor_idx]
+            
+            if offset_word == "090":
+                continue
 
             tup = (current_word, {offset: [offset_word]})
 
