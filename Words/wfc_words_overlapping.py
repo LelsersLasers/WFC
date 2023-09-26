@@ -11,7 +11,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-n", "--n", required=True, type=int, help="N")
 ap.add_argument("-f", "--filename", required=True, type=str, help="Filename")
 ap.add_argument("-l", "--length", required=False, help="Output length")
-ap.add_argument("-m", "--min-length", required=False, help="Output length")
+ap.add_argument("-m", "--min-length", required=False, help="Output minimum length")
 
 args = vars(ap.parse_args())
 
