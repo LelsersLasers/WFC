@@ -2,15 +2,33 @@ use std::collections::HashMap;
 // use weighted_rand::builder::*;
 use rayon::prelude::*;
 use regex::Regex;
+use structopt::StructOpt;
 
-const N: i32 = 2;
-const OUTPUT_LEN: usize = 20;
-const FILENAME: &str = "../book-database/test.txt";
+// const N: i32 = 2;
+// const OUTPUT_LEN: usize = 20;
+// const FILENAME: &str = "../book-database/test.txt";
 
 const END_WORD_PUNCTUATION: &str = ".,;!?:-—";
 const OTHER_PUNCTUATION: [&str; 8] = ["'", "’", ")", "(", "[", "]", "{", "}"];
 const CAP_PUNCTUATION: &str = ".!?";
 const STRIP_PUNCTUATION: &str = ".,;!?:";
+
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "WFC Words", about = "Wave Function Collapse for prose")]
+struct Opt {
+    // N
+    #[structopt(short, long)]
+    n: i32,
+
+    // Output length
+    #[structopt(short, long)]
+    length: usize,
+
+    // Filename
+    #[structopt(short, long)]
+    filename: String,
+}
 
 #[derive(Clone)]
 struct Word {
@@ -47,7 +65,7 @@ impl Spot {
     }
 
     fn str(&self) -> String {
-        if self.collapsed {
+        if self.collapsed && !self.words.is_empty() {
             self.words[0].word.clone()
         } else {
             format!("{}", self.words.len())
@@ -76,19 +94,19 @@ impl Spot {
         self.collapsed = true;
     }
 
-    fn semi_collapse_to_period(&mut self) {
+    fn semi_collapse_to_cap_punctuation(&mut self) {
         self.words = self
             .words
             .iter()
-            .filter(|w| w.word == ".")
+            .filter(|w| w.word.len() == 1 && CAP_PUNCTUATION.contains(&w.word))
             .cloned()
             .collect::<Vec<Word>>();
     }
 
     fn update(&mut self, neighbor_words: &[Word], offset: i32) -> bool {
-        if self.collapsed {
-            return false;
-        }
+        // if self.collapsed {
+        //     return false;
+        // }
 
         let previous_count = self.words.len();
         let offset = -offset;
@@ -125,45 +143,58 @@ fn lowest_entropy_indexes(spots: &[Spot]) -> (Vec<usize>, bool, bool) {
     let mut done = true;
 
     for (i, spot) in spots.iter().enumerate() {
-        if spot.collapsed {
-            continue;
-        }
-
-        done = false;
-
         let len = spot.words.len();
+
         if len == 0 {
             return (Vec::new(), true, false);
-        } else if len < lowest_entropy {
-            lowest_entropy = len;
-            idxs = vec![i];
-        } else if len == lowest_entropy {
-            idxs.push(i);
+        }
+
+        if !spot.collapsed {
+            done = false;
+
+            match len.cmp(&lowest_entropy) {
+                std::cmp::Ordering::Less => {
+                    lowest_entropy = len;
+                    idxs = vec![i];
+                }
+                std::cmp::Ordering::Equal => {
+                    idxs.push(i);
+                }
+                std::cmp::Ordering::Greater => {}
+            }
+
+            // if len < lowest_entropy {
+            //     lowest_entropy = len;
+            //     idxs = vec![i];
+            // } else if len == lowest_entropy {
+            //     idxs.push(i);
+            // }
         }
     }
 
     (idxs, false, done)
 }
 
-fn propagate(spots: &mut Vec<Spot>, index: usize) {
+fn propagate(spots: &mut Vec<Spot>, index: usize, n: i32) {
     let mut stack = vec![index];
 
-    let mut offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+    let mut offsets = (-n..n + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
     offsets.sort_by_key(|a| a.abs());
 
     while let Some(current_index) = stack.pop() {
-        let neighbor_idxs = offsets
-            .iter()
-            .map(|o| current_index as i32 + o)
-            .collect::<Vec<i32>>();
+        // let neighbor_idxs = offsets
+        //     .iter()
+        //     .map(|o| current_index as i32 + o)
+        //     .collect::<Vec<i32>>();
 
         let current_words = &spots[current_index].words.clone();
-        for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
-            if neighbor_idx < &0 || neighbor_idx > &(spots.len() as i32 - 1) {
+        for offset in offsets.iter() {
+            let neighbor_idx = current_index as i32 + offset;
+            if neighbor_idx < 0 || neighbor_idx > spots.len() as i32 - 1 {
                 continue;
             }
 
-            let neighbor_idx = *neighbor_idx as usize;
+            let neighbor_idx = neighbor_idx as usize;
             let updated = spots[neighbor_idx].update(current_words, *offset);
             if updated && !stack.contains(&neighbor_idx) {
                 stack.push(neighbor_idx);
@@ -175,7 +206,7 @@ fn propagate(spots: &mut Vec<Spot>, index: usize) {
     }
 }
 
-fn iterate(spots: &mut Vec<Spot>) -> (bool, bool) {
+fn iterate(spots: &mut Vec<Spot>, n: i32) -> (bool, bool) {
     let (lowest_indexes, failed, done) = lowest_entropy_indexes(spots);
 
     if failed || done {
@@ -184,12 +215,12 @@ fn iterate(spots: &mut Vec<Spot>) -> (bool, bool) {
 
     let lowest_index = lowest_indexes[rand::random::<usize>() % lowest_indexes.len()];
     spots[lowest_index].collapse();
-    propagate(spots, lowest_index);
+    propagate(spots, lowest_index, n);
 
     (failed, done)
 }
 
-fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
+fn create_spots(words: Vec<Word>, length: usize, n: i32) -> Vec<Spot> {
     let mut spots = Vec::new();
 
     for _ in 0..length {
@@ -200,16 +231,16 @@ fn create_spots(words: Vec<Word>, length: usize) -> Vec<Spot> {
         spots.push(spot);
     }
 
-    spots[0].semi_collapse_to_period();
+    spots[0].semi_collapse_to_cap_punctuation();
     let len = spots.len();
-    spots[len - 1].semi_collapse_to_period();
+    spots[len - 1].semi_collapse_to_cap_punctuation();
 
     println!("{}", join_spots(&spots));
 
-    propagate(&mut spots, 0);
+    propagate(&mut spots, 0, n);
     println!("{}", join_spots(&spots));
 
-    propagate(&mut spots, len - 1);
+    propagate(&mut spots, len - 1, n);
     println!("{}", join_spots(&spots));
 
     spots
@@ -253,7 +284,7 @@ fn join_spots(spots: &Vec<Spot>) -> String {
     output.trim().to_string()
 }
 
-fn read_words(filename: &str) -> Vec<Word> {
+fn read_words(filename: &str, n: i32) -> Vec<Word> {
     let mut word_strings = Vec::new();
 
     let contents =
@@ -296,7 +327,7 @@ fn read_words(filename: &str) -> Vec<Word> {
 
     let mut all_word_combos = vec![word_combo];
 
-    let offsets = (-N..N + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
+    let offsets = (-n..n + 1).filter(|o| *o != 0).collect::<Vec<i32>>();
 
     let len = word_strings.len();
     let last_word = &word_strings[len - 1];
@@ -306,17 +337,18 @@ fn read_words(filename: &str) -> Vec<Word> {
     for i in 0..len {
         let current_word = &word_strings[i];
 
-        let neighbor_idxs = offsets.iter().map(|o| i as i32 + o).collect::<Vec<i32>>();
-        for (neighbor_idx, offset) in neighbor_idxs.iter().zip(&offsets) {
-            if neighbor_idx < &-1 || neighbor_idx > &(len as i32 - length_offset) {
+        // let neighbor_idxs = offsets.iter().map(|o| i as i32 + o).collect::<Vec<i32>>();
+        for offset in offsets.iter() {
+            let neighbor_idx = i as i32 + offset;
+            if neighbor_idx < -1 || neighbor_idx > len as i32 - length_offset {
                 continue;
             }
 
             let offset_word =
-                if neighbor_idx == &(len as i32 - length_offset) || neighbor_idx == &-1 {
+                if neighbor_idx == len as i32 - length_offset || neighbor_idx == -1 {
                     "."
                 } else {
-                    &word_strings[*neighbor_idx as usize]
+                    &word_strings[neighbor_idx as usize]
                 };
 
             let hashmap = HashMap::from([(*offset, vec![offset_word.to_string()])]);
@@ -360,21 +392,23 @@ fn read_words(filename: &str) -> Vec<Word> {
 }
 
 fn main() {
-    let words = read_words(FILENAME);
+    let opt = Opt::from_args();
+
+    let words = read_words(opt.filename.as_str(), opt.n);
     println!("Read {} words", words.len());
 
-    let mut spots = create_spots(words.clone(), OUTPUT_LEN);
+    let mut spots = create_spots(words.clone(), opt.length, opt.n);
 
     let mut done = false;
 
     while !done {
-        let (failed, d) = iterate(&mut spots);
+        let (failed, d) = iterate(&mut spots, opt.n);
         done = d;
         println!("{}\n", join_spots(&spots));
 
         if failed {
             println!("KNOTTED, RESTARTING\n");
-            spots = create_spots(words.clone(), OUTPUT_LEN);
+            spots = create_spots(words.clone(), opt.length, opt.n);
         }
     }
 }

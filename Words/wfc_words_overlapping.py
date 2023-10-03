@@ -11,14 +11,16 @@ ap = argparse.ArgumentParser()
 ap.add_argument("-n", "--n", required=True, type=int, help="N")
 ap.add_argument("-f", "--filename", required=True, type=str, help="Filename")
 ap.add_argument("-l", "--length", required=False, help="Output length")
-ap.add_argument("-m", "--min-length", required=False, help="Output length")
+ap.add_argument("-m", "--min-length", required=False, help="Output minimum length")
 
 args = vars(ap.parse_args())
 
 N: int = args["n"]
 FILENAME: str = args["filename"]
 OUTPUT_LENGTH: int | None = args["length"] if args["length"] is None else int(args["length"])
-MIN_OUTPUT_LENGTH: int | None = args["min_length"] if args["min_length"] is None else int(args["min_length"])
+MIN_OUTPUT_LENGTH: int | None = (
+    args["min_length"] if args["min_length"] is None else int(args["min_length"])
+)
 # ---------------------------------------------------------------------------- #
 
 
@@ -46,7 +48,7 @@ class Spot:
         self.collapsed: bool = False
 
     def __str__(self) -> str:
-        if self.collapsed:
+        if self.collapsed and len(self.words) > 0:
             return self.words[0].word
         else:
             return str(len(self.words))
@@ -62,14 +64,14 @@ class Spot:
         self.words = [self.random_word()]
         self.collapsed = True
 
-    def semi_collapse_to_period(self):
-        period_words = [word for word in self.words if word.word == "."]
+    def semi_collapse_to_cap_punctuation(self):
+        period_words = [word for word in self.words if len(word.word) == 1 and word.word in CAP_PUNCTUATION]
         self.words = period_words
         # self.collapsed = True
 
     def update(self, neighbor_words: list[Word], offset: int) -> bool:
-        if self.collapsed:
-            return False
+        # if self.collapsed:
+        #     return False
 
         previous_count = len(self.words)
         offset = -offset
@@ -100,27 +102,29 @@ def lowest_entropy_indexes(spots: list[Spot]) -> tuple[list[int], bool, bool]:
     indexes = []
     done = True
     for i, spot in enumerate(spots):
+        if len(spot.words) == 0:
+            return [], True, False
+
         if not spot.collapsed:
             done = False
 
-            if len(spot.words) == 0:
-                return [], True, False
-            elif len(spot.words) < lowest_entropy:
+            if len(spot.words) < lowest_entropy:
                 lowest_entropy = len(spot.words)
                 indexes = [i]
             elif len(spot.words) == lowest_entropy:
                 indexes.append(i)
+
     return indexes, False, done
 
 
 def propagate(spots: list[Spot], index: int) -> None:
     stack = [index]
 
+    offsets = [i for i in range(-N, N + 1) if i != 0]
+    offsets.sort(key=lambda x: abs(x))
+
     while len(stack) > 0:
         current_index = stack.pop()
-
-        offsets = [i for i in range(-N, N + 1) if i != 0]
-        offsets.sort(key=lambda x: abs(x))
         # neighbor_idxs = [current_index + offset for offset in offsets]
 
         current_words = spots[current_index].words
@@ -138,7 +142,9 @@ def propagate(spots: list[Spot], index: int) -> None:
         print(join_spots(spots) + "   " + str(len(stack)) + ": " + str(stack))
 
 
-def iterate(spots: list[Spot], words: list[Word], max_len: int | None) -> tuple[bool, bool, int | None]:
+def iterate(
+    spots: list[Spot], words: list[Word], max_len: int | None
+) -> tuple[bool, bool, int | None]:
     lowest_indexes, failed, done = lowest_entropy_indexes(spots)
 
     if len(lowest_indexes) > 0:
@@ -153,7 +159,12 @@ def iterate(spots: list[Spot], words: list[Word], max_len: int | None) -> tuple[
 
             if max_len is None:
                 for i, spot in enumerate(spots):
-                    if spot.collapsed and i >= MIN_OUTPUT_LENGTH and spot.words[0].word in CAP_PUNCTUATION:
+                    if (
+                        spot.collapsed
+                        and len(spot.words) > 0
+                        and i >= MIN_OUTPUT_LENGTH
+                        and spot.words[0].word in CAP_PUNCTUATION
+                    ):
                         max_len = i
             else:
                 for i in range(len(spots) - 1, max_len, -1):
@@ -233,12 +244,14 @@ def read_words(filename: str) -> list[Word]:
             all_word_combs.append(tup)
 
     words: list[Word] = []
+    word_strs: list[str] = []
     for word_comb in all_word_combs:
         word_str = word_comb[0]
         allowed = word_comb[1]
 
-        if word_str not in [word.word for word in words]:
+        if word_str not in word_strs:
             words.append(Word(word_str, 1, allowed))
+            word_strs.append(word_str)
         else:
             for word in words:
                 if word.word == word_str:
@@ -261,12 +274,13 @@ def create_spot(words: list[Word]) -> Spot:
         spot.add_word(copy.deepcopy(word))
     return spot
 
+
 def create_spots(words: list[Word], length: int | None, min_length: int | None) -> list[Spot]:
     spots: list[Spot] = []
 
     if length is None and min_length is None:
         raise Exception("Must specify length or min_length")
-    
+
     elif length is not None:
         l = length
     elif min_length is not None:
@@ -276,18 +290,17 @@ def create_spots(words: list[Word], length: int | None, min_length: int | None) 
         spot = create_spot(words)
         spots.append(spot)
 
-    spots[0].semi_collapse_to_period()
+    spots[0].semi_collapse_to_cap_punctuation()
     print(join_spots(spots))
 
     propagate(spots, 0)
     print(join_spots(spots))
 
     if min_length is None:
-        spots[-1].semi_collapse_to_period()
+        spots[-1].semi_collapse_to_cap_punctuation()
         print(join_spots(spots))
         propagate(spots, len(spots) - 1)
         print(join_spots(spots))
-
 
     return spots
 
