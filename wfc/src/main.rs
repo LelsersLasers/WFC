@@ -23,6 +23,7 @@ async fn main() {
     ).unwrap();
 
     let mut wave = wfc::Wave::new(src);
+    wave.create_grid();
 
     mq::rand::srand(instant::now() as u64);
 

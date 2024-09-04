@@ -179,6 +179,7 @@ pub struct Wave {
 	grid: Vec<GridSpot>,
 	update_stack: Vec<(i32, i32)>,
 	going: bool,
+	knotted: bool,
 }
 impl Wave {
 	pub fn new(src: mq::Image) -> Self {
@@ -187,14 +188,6 @@ impl Wave {
 			for y in 0..src.height() {
 				let pattern = Pattern::from_img(x, y, &src);
 				patterns.push(pattern);
-			}
-		}
-
-		let mut grid = Vec::new();
-		for x in 0..consts::DIMS_X {
-			for y in 0..consts::DIMS_Y {
-				let grid_spot = GridSpot::new(x as i32, y as i32, patterns.len());
-				grid.push(grid_spot);
 			}
 		}
 
@@ -214,7 +207,16 @@ impl Wave {
 			}
 		}
 
-		Self { patterns, grid, update_stack: Vec::new(), going: true }
+		Self { patterns, grid: Vec::new(), update_stack: Vec::new(), going: true, knotted: false }
+	}
+	pub fn create_grid(&mut self) {
+		self.grid.clear();
+		for x in 0..consts::DIMS_X {
+			for y in 0..consts::DIMS_Y {
+				let grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
+				self.grid.push(grid_spot);
+			}
+		}
 	}
 	pub fn going(&self) -> bool {
 		self.going
@@ -222,6 +224,12 @@ impl Wave {
 	pub fn step(&mut self) {
 		if !self.going {
 			return;
+		}
+
+		if self.knotted {
+			self.create_grid();
+			self.update_stack.clear();
+			self.knotted = false;
 		}
 
 		if self.update_stack.is_empty() {
@@ -241,13 +249,19 @@ impl Wave {
 			mq::draw_rectangle(x, y, w, h, mq_color);
 		}
 	}
-	fn lowest_entropy_spot_idx(&self) -> (bool, Option<usize>) {
+	fn lowest_entropy_spot_idx(&self) -> (bool, bool, Option<usize>) {
 		let mut lowest_entropy = usize::MAX;
 		let mut lowest_entropy_idxs = Vec::new();
 		let mut finished = true;
+		let mut knotted = false;
 
 		for (i, spot) in self.grid.iter().enumerate() {
 			let count = spot.valid_patterns.iter().filter(|&&x| x).count();
+			if count == 0 {
+				println!("Knotted: {}", i);
+				knotted = true;
+				break;
+			}
 			if count > 1 {
 				finished = false;
 				match count.cmp(&lowest_entropy) {
@@ -264,14 +278,17 @@ impl Wave {
 			}
 		}
 
+		if knotted {
+			return (true, false, None);
+		}
 		if finished {
-			return (finished, None);
+			return (false, true, None);
 		}
 
 		println!("lowest_entropy_idxs: {:?}", lowest_entropy_idxs.len());
 
 		let idx = mq::rand::gen_range(0, lowest_entropy_idxs.len());
-		(finished, Some(lowest_entropy_idxs[idx]))
+		(false, false, Some(lowest_entropy_idxs[idx]))
 	}
 	fn add_to_stack(&mut self, pos: (i32, i32)) {
 		if !self.update_stack.contains(&pos) {
@@ -279,9 +296,15 @@ impl Wave {
 		}
 	}
 	fn iterate(&mut self) {
-		let (finished, idx) = self.lowest_entropy_spot_idx();
+		let (knotted, finished, idx) = self.lowest_entropy_spot_idx();
+		if knotted {
+			self.knotted = true;
+			println!("Knotted!");
+			return;
+		}
 		if finished {
 			self.going = false;
+			println!("Finished!");
 			return;
 		}
 		let idx = idx.unwrap();
