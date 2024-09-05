@@ -289,17 +289,17 @@ impl Wave {
 			let x = spot.x as f32 * w;
 			let y = spot.y as f32 * h;
 
-			// let collapsed = spot.valid_patterns.iter().filter(|&&x| x).count() == 1;
+			let count = spot.valid_patterns.iter().filter(|&&x| x).count();
 
-			// if collapsed {
-			// 	mq::draw_rectangle(x, y, w, h, mq::PINK);
-			// }
-			// mq::draw_rectangle(x + 2., y + 2., w - 4., h - 4., mq_color);
-			mq::draw_rectangle(x, y, w, h, mq_color);
+			if count == 1 {
+				mq::draw_rectangle(x, y, w, h, mq::PINK);
+			}
+			mq::draw_rectangle(x + 2., y + 2., w - 4., h - 4., mq_color);
+			// mq::draw_rectangle(x, y, w, h, mq_color);
 
 
-			// let text = format!("{}", spot.valid_patterns.iter().filter(|&&x| x).count());
-			// mq::draw_text(&text, x + 10., y + 10., 20., mq::WHITE);
+			let text = format!("{}", count);
+			mq::draw_text(&text, x + 10., y + 10., 20., mq::WHITE);
 		}
 	}
 	fn lowest_entropy_spot_idx(&self) -> (bool, bool, Option<usize>) {
