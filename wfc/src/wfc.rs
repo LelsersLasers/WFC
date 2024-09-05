@@ -293,6 +293,8 @@ impl Wave {
 
 			if count == 1 {
 				mq::draw_rectangle(x, y, w, h, mq::PINK);
+			} else if self.update_stack.contains(&(spot.x, spot.y)) {
+				mq::draw_rectangle(x, y, w, h, mq::GREEN);
 			}
 			mq::draw_rectangle(x + 2., y + 2., w - 4., h - 4., mq_color);
 			// mq::draw_rectangle(x, y, w, h, mq_color);
