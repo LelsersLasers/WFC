@@ -18,7 +18,7 @@ fn window_conf() -> mq::Conf {
 async fn main() {
 
     let src = mq::Image::from_file_with_format(
-        include_bytes!("../samples/Skyline.png"),
+        include_bytes!("../samples/ColoredCity.png"),
         Some(mq::ImageFormat::Png),
     ).unwrap();
 

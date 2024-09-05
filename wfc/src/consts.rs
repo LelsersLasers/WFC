@@ -1,7 +1,7 @@
 use macroquad::prelude as mq;
 
-pub const DIMS_X: usize = 20;
-pub const DIMS_Y: usize = 20;
+pub const DIMS_X: usize = 30;
+pub const DIMS_Y: usize = 30;
 pub const N: usize = 3;
 
 pub const TARGET_FPS: u32 = 30;
