@@ -7,8 +7,8 @@ mod wfc;
 fn window_conf() -> mq::Conf {
     mq::Conf {
         window_title: "WFC".to_owned(),
-        window_width: consts::WINDOW_WIDTH as i32,
-        window_height: consts::WINDOW_HEIGHT as i32,
+        window_width: consts::WINDOW_WIDTH as i32 + 200,
+        window_height: consts::WINDOW_HEIGHT as i32 + 200,
         window_resizable: false,
         ..Default::default()
     }
@@ -25,7 +25,9 @@ async fn main() {
     let mut wave = wfc::Wave::new(src);
     wave.create_grid();
 
-    mq::rand::srand(instant::now() as u64);
+
+    let seed = (instant::now() % 1000.) * 1000.0;
+    mq::rand::srand(seed as u64);
 
 
     loop {
@@ -36,6 +38,12 @@ async fn main() {
                 wave.step();
             }
         }
+        // if wave.going() && mq::is_key_pressed(mq::KeyCode::Space) {
+        //     wave.step();
+        // }
+        // if wave.going() {
+        //     wave.step();
+        // }
 
         wave.draw();
 

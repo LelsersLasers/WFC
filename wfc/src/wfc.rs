@@ -10,9 +10,6 @@ struct Color {
 	m: u8,
 }
 impl Color {
-	// fn new(r: u8, g: u8, b: u8, m: u8) -> Self {
-	// 	Self { r, g, b, m }
-	// }
 	fn from_mq_color(mq_color: mq::Color, m: u8) -> Self {
 		Self {
 			r: (mq_color.r * 255.0).round() as u8,
@@ -31,13 +28,11 @@ impl PartialEq for Color {
 
 // -------------------------------------------------------------------------- //
 struct Pattern {
-	colors: Vec<Color>, // 2D, NxN array of colors
+	// colors: Vec<Color>, // 2D, NxN array of colors
+	colors: Vec<Vec<Color>>, // 2D, NxN array of colors
 	overlaps: Vec<Overlap>,
 }
 impl Pattern {
-	// fn new(colors: Vec<Color>, overlaps: Vec<Overlap>) -> Self {
-	// 	Self { colors, overlaps }
-	// }
 	fn from_img(center_x: usize, center_y: usize, src: &mq::Image) -> Self {
 		let mut colors = Vec::new();
 		let shift = (consts::N - 1) as i32 / 2;
@@ -49,6 +44,7 @@ impl Pattern {
 		let end_y = start_y + consts::N as i32;
 
 		for x in start_x..end_x {
+			colors.push(Vec::new());
 			for y in start_y..end_y {
 				let mut m = 0;
 
@@ -61,32 +57,36 @@ impl Pattern {
 				}
 
 				let mq_color = if m != 0 {
-					mq::Color::new(0.0, 0.0, 0.0, 1.0)
+					mq::Color::new(1.0, 0.0, 1.0, 1.0)
 				} else {
 					src.get_pixel(x as u32, y as u32)
 				};
 
 				let color = Color::from_mq_color(mq_color, m);
-				colors.push(color);
+				// colors.push(color);
+
+				let last_idx = colors.len() - 1;
+				colors[last_idx].push(color);
 			}
 		}
 
 		Self { colors, overlaps: Vec::new() }
 	}
 	fn color_at(&self, x: usize, y: usize) -> Color {
-		self.colors[x * consts::N + y]
+		// self.colors[x * consts::N + y]
+		self.colors[x][y]
 	}
 	fn can_go_next_to(&self, other: &Self, offset_x: i32, offset_y: i32) -> bool {
-		for x in 0..consts::N as i32 {
-			for y in 0..consts::N as i32 {
-				let other_x = x + offset_x;
-				let other_y = y + offset_y;
+		for pattern_x in 0..consts::N as i32 {
+			for pattern_y in 0..consts::N as i32 {
+				let other_pattern_x = pattern_x - offset_x;
+				let other_pattern_y = pattern_y - offset_y;
 
-				if other_x < 0 || other_x >= consts::N as i32 || other_y < 0 || other_y >= consts::N as i32 {
+				if other_pattern_x < 0 || other_pattern_x >= consts::N as i32 || other_pattern_y < 0 || other_pattern_y >= consts::N as i32 {
 					continue;
 				}
-				let color = self.color_at(x as usize, y as usize);
-				let other_color = other.color_at(other_x as usize, other_y as usize);
+				let color = self.color_at(pattern_x as usize, pattern_y as usize);
+				let other_color = other.color_at(other_pattern_x as usize, other_pattern_y as usize);
 				if color != other_color {
 					return false;
 				}
@@ -95,12 +95,16 @@ impl Pattern {
 
 		true
 	}
+	fn center_color(&self) -> Color {
+		// self.colors[self.colors.len() / 2]
+		self.colors[consts::N / 2][consts::N / 2]
+	}
 	fn to_mq_color(&self) -> mq::Color {
-		let idx = self.colors.len() / 2;
+		let center_color = self.center_color();
 		mq::Color::new(
-			self.colors[idx].r as f32 / 255.0,
-			self.colors[idx].g as f32 / 255.0,
-			self.colors[idx].b as f32 / 255.0,
+			center_color.r as f32 / 255.0,
+			center_color.g as f32 / 255.0,
+			center_color.b as f32 / 255.0,
 			1.0
 		)
 	}
@@ -134,8 +138,6 @@ impl PartialEq for Overlap {
 struct GridSpot {
 	x: i32,
 	y: i32,
-	// valid_patterns: Vec<Pattern>,
-	// valid_states: Vec<Pattern>,
 	valid_patterns: Vec<bool>,
 }
 impl GridSpot {
@@ -148,6 +150,42 @@ impl GridSpot {
 		let pattern_idx = valid_idxs[idx];
 		self.valid_patterns = vec![false; self.valid_patterns.len()];
 		self.valid_patterns[pattern_idx] = true;
+	}
+	fn check_edges(&mut self, patterns: &[Pattern]) -> bool {
+		let mut updated = false;
+		for (i, pattern) in patterns.iter().enumerate() {
+			if !self.valid_patterns[i] {
+				continue;
+			}
+
+			let shift = (consts::N - 1) as i32 / 2;
+
+			for x in 0..consts::N as i32 {
+				for y in 0..consts::N as i32 {
+					let output_x = self.x + x - shift;
+					let output_y = self.y + y - shift;
+
+					let mut m = 0;
+
+					// #[rustfmt::skip]
+					{
+						if output_x < 0                      { m |= 1 << 0; }
+						if output_x >= consts::DIMS_X as i32 { m |= 1 << 1; }
+						if output_y < 0                      { m |= 1 << 2; }
+						if output_y >= consts::DIMS_Y as i32 { m |= 1 << 3; }
+					}
+
+					let color = pattern.color_at(x as usize, y as usize);
+					if color.m != m {
+						self.valid_patterns[i] = false;
+						updated = true;
+						break;
+					}
+				}
+			}
+		}
+
+		updated
 	}
 	fn calculate_mq_color(&self, patterns: &[Pattern]) -> mq::Color {
 		let sum = self.valid_patterns.iter().enumerate().fold(
@@ -193,11 +231,16 @@ impl Wave {
 
 		for i in 0..patterns.len() {
 			for j in 0..patterns.len() {
-				if i == j {
-					continue;
-				}
+				// if i == j {
+				// 	continue;
+				// }
+
 				for offset_x in -(consts::N as i32) + 1..consts::N as i32 {
 					for offset_y in -(consts::N as i32) + 1..consts::N as i32 {
+						if offset_x == 0 && offset_y == 0 {
+							continue;
+						}
+
 						if patterns[i].can_go_next_to(&patterns[j], offset_x, offset_y) {
 							let overlap = Overlap::new(j, offset_x, offset_y);
 							patterns[i].overlaps.push(overlap);
@@ -213,7 +256,13 @@ impl Wave {
 		self.grid.clear();
 		for x in 0..consts::DIMS_X {
 			for y in 0..consts::DIMS_Y {
-				let grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
+				let mut grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
+			
+				let updated = grid_spot.check_edges(&self.patterns);
+				if updated {
+					self.add_to_stack((x as i32, y as i32));
+				}
+
 				self.grid.push(grid_spot);
 			}
 		}
@@ -227,8 +276,8 @@ impl Wave {
 		}
 
 		if self.knotted {
-			self.create_grid();
 			self.update_stack.clear();
+			self.create_grid();
 			self.knotted = false;
 		}
 
@@ -246,7 +295,18 @@ impl Wave {
 			let mq_color = spot.calculate_mq_color(&self.patterns);
 			let x = spot.x as f32 * w;
 			let y = spot.y as f32 * h;
+
+			// let collapsed = spot.valid_patterns.iter().filter(|&&x| x).count() == 1;
+
+			// if collapsed {
+			// 	mq::draw_rectangle(x, y, w, h, mq::PINK);
+			// }
+			// mq::draw_rectangle(x + 2., y + 2., w - 4., h - 4., mq_color);
 			mq::draw_rectangle(x, y, w, h, mq_color);
+
+
+			// let text = format!("{}", spot.valid_patterns.iter().filter(|&&x| x).count());
+			// mq::draw_text(&text, x + 10., y + 10., 20., mq::WHITE);
 		}
 	}
 	fn lowest_entropy_spot_idx(&self) -> (bool, bool, Option<usize>) {
@@ -324,6 +384,7 @@ impl Wave {
 
 		let pattern_len = self.patterns.len();
 
+		// TRY DIFFERENT ORDER
 		for offset_x in -(consts::N as i32) + 1..consts::N as i32 {
 			for offset_y in -(consts::N as i32) + 1..consts::N as i32 {
 				if offset_x == 0 && offset_y == 0 {
@@ -336,9 +397,7 @@ impl Wave {
 				}
 				let other_idx = other_pos.0 as usize * consts::DIMS_Y + other_pos.1 as usize;
 
-				let mut current_possible_overlaps: Vec<&Overlap> = Vec::new();
-				// let current_possible_patterns = self.grid[idx].valid_patterns.iter().enumerate().filter_map(|(i, state)| if *state { Some(i) } else { None }).collect::<Vec<usize>>();
-				
+				let mut other_possible_patterns: Vec<usize> = Vec::new();
 
 				for i in 0..pattern_len {
 					if !self.grid[idx].valid_patterns[i] {
@@ -348,9 +407,9 @@ impl Wave {
 					for j in 0..pattern.overlaps.len() {
 						if pattern.overlaps[j].offset_x == offset_x
 							&& pattern.overlaps[j].offset_y == offset_y
-							&& !current_possible_overlaps.contains(&&pattern.overlaps[j])
+							&& !other_possible_patterns.contains(&pattern.overlaps[j].pattern_idx)
 						{
-							current_possible_overlaps.push(&pattern.overlaps[j]);
+							other_possible_patterns.push(pattern.overlaps[j].pattern_idx);
 						}
 					}
 				}
@@ -359,8 +418,7 @@ impl Wave {
 					if !self.grid[other_idx].valid_patterns[i] {
 						continue;
 					}
-					let overlap_for_other_pattern = Overlap::new(i, offset_x, offset_y);
-					if !current_possible_overlaps.contains(&&overlap_for_other_pattern) {
+					if !other_possible_patterns.contains(&i) {
 						self.grid[other_idx].valid_patterns[i] = false;
 
 						// self.add_to_stack(other_pos);
