@@ -22,6 +22,7 @@ async fn main() {
         Some(mq::ImageFormat::Png),
     ).unwrap();
 
+
     let mut wave = wfc::Wave::new(src);
     wave.create_grid();
 
@@ -29,15 +30,17 @@ async fn main() {
     let seed = (instant::now() % 1000.) * 1000.0;
     mq::rand::srand(seed as u64);
 
+    let mut steps_per_frame = 1;
+
 
     loop {
         mq::clear_background(consts::CLEAR_COLOR);
 
-        for _ in 0..20 {
-            if wave.going() {
-                wave.step();
-            }
-        }
+        // for _ in 0..4 {
+        //     if wave.going() {
+        //         wave.step();
+        //     }
+        // }
         // if wave.going() && mq::is_key_pressed(mq::KeyCode::Space) {
         //     wave.step();
         // }
@@ -45,10 +48,26 @@ async fn main() {
         //     wave.step();
         // }
 
+        for _ in 0..steps_per_frame {
+            if wave.going() {
+                wave.step();
+            }
+        }
+
         wave.draw();
 
         let fps = mq::get_fps();
-        mq::draw_text(&format!("FPS: {}", fps), 10.0, 20.0, 20.0, mq::WHITE);
+
+        if fps > consts::TARGET_FPS as i32 && wave.going() {
+            steps_per_frame += 1;
+        } else {
+            steps_per_frame -= 1;
+        }
+
+        steps_per_frame = steps_per_frame.max(1);
+
+        mq::draw_text(&format!("FPS: {} ({})", fps, steps_per_frame), 10.0, 20.0, 20.0, mq::WHITE);
+
 
         mq::next_frame().await
     }
