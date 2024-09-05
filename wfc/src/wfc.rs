@@ -384,9 +384,12 @@ impl Wave {
 
 		let pattern_len = self.patterns.len();
 
-		// TRY DIFFERENT ORDER
-		for offset_x in -(consts::N as i32) + 1..consts::N as i32 {
-			for offset_y in -(consts::N as i32) + 1..consts::N as i32 {
+		let offsets = -(consts::N as i32) + 1..consts::N as i32;
+		let mut sorted_offsets = offsets.clone().collect::<Vec<i32>>();
+		sorted_offsets.sort_unstable_by_key(|&x| x.abs());
+
+		for offset_x in sorted_offsets.clone() {
+			for offset_y in sorted_offsets.clone() {
 				if offset_x == 0 && offset_y == 0 {
 					continue;
 				}
