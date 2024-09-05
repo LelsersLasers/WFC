@@ -28,8 +28,7 @@ impl PartialEq for Color {
 
 // -------------------------------------------------------------------------- //
 struct Pattern {
-	// colors: Vec<Color>, // 2D, NxN array of colors
-	colors: Vec<Vec<Color>>, // 2D, NxN array of colors
+	colors: Vec<Color>, // 2D, NxN array of colors
 	overlaps: Vec<Overlap>,
 }
 impl Pattern {
@@ -44,7 +43,6 @@ impl Pattern {
 		let end_y = start_y + consts::N as i32;
 
 		for x in start_x..end_x {
-			colors.push(Vec::new());
 			for y in start_y..end_y {
 				let mut m = 0;
 
@@ -63,18 +61,14 @@ impl Pattern {
 				};
 
 				let color = Color::from_mq_color(mq_color, m);
-				// colors.push(color);
-
-				let last_idx = colors.len() - 1;
-				colors[last_idx].push(color);
+				colors.push(color);
 			}
 		}
 
 		Self { colors, overlaps: Vec::new() }
 	}
 	fn color_at(&self, x: usize, y: usize) -> Color {
-		// self.colors[x * consts::N + y]
-		self.colors[x][y]
+		self.colors[x * consts::N + y]
 	}
 	fn can_go_next_to(&self, other: &Self, offset_x: i32, offset_y: i32) -> bool {
 		for pattern_x in 0..consts::N as i32 {
@@ -96,8 +90,7 @@ impl Pattern {
 		true
 	}
 	fn center_color(&self) -> Color {
-		// self.colors[self.colors.len() / 2]
-		self.colors[consts::N / 2][consts::N / 2]
+		self.colors[self.colors.len() / 2]
 	}
 	fn to_mq_color(&self) -> mq::Color {
 		let center_color = self.center_color();
