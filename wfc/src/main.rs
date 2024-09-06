@@ -9,8 +9,8 @@ mod wfc;
 fn window_conf() -> mq::Conf {
     mq::Conf {
         window_title: "WFC".to_owned(),
-        window_width: consts::WINDOW_WIDTH as i32 + 200,
-        window_height: consts::WINDOW_HEIGHT as i32 + 200,
+        window_width: consts::WINDOW_WIDTH as i32,
+        window_height: consts::WINDOW_HEIGHT as i32,
         window_resizable: false,
         ..Default::default()
     }
