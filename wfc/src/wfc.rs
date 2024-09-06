@@ -224,7 +224,7 @@ impl GridSpot {
 					}
 
 					let color = pattern.color_at(x as usize, y as usize, args.n);
-					if color.m != m {
+					if (args.edges && color.m != m) || (!args.edges && color.m != 0) {
 						self.valid_patterns[i] = false;
 						updated = true;
 						break;
@@ -332,11 +332,9 @@ impl Wave {
 			for y in 0..self.args.dims_y {
 				let mut grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
 			
-				if self.args.edges {
-					let updated = grid_spot.check_edges(&self.patterns, &self.args);
-					if updated {
-						self.add_to_stack((x as i32, y as i32));
-					}
+				let updated = grid_spot.check_edges(&self.patterns, &self.args);
+				if updated {
+					self.add_to_stack((x as i32, y as i32));
 				}
 
 				self.grid.push(grid_spot);
