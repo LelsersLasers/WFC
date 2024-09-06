@@ -363,7 +363,7 @@ impl Wave {
 			return (false, true, None);
 		}
 
-		println!("lowest_entropy_idxs: {:?}", lowest_entropy_idxs.len());
+		println!("lowest_entropy_idxs: {} ({})", lowest_entropy_idxs.len(), lowest_entropy);
 
 		let idx = mq::rand::gen_range(0, lowest_entropy_idxs.len());
 		(false, false, Some(lowest_entropy_idxs[idx]))
