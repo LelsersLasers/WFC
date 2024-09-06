@@ -104,15 +104,14 @@ impl Pattern {
 	fn rotate(&self, n: usize, times: usize) -> Self {
 		fn rotate90(colors: &[Color], n: usize) -> Vec<Color> {
 			let mut new_colors = colors.to_owned();
-			let x = n / 2;
 			let y = n - 1;
-			for i in 0..x {
+			for i in 0..n / 2 {
 				for j in i..y - i {
-					let k = colors[i * n + j];
-					new_colors[i * n + j] = colors[(y - j) * n + i];
-					new_colors[(y - j) * n + i] = colors[(y - i) * n + (y - j)];
-					new_colors[(y - i) * n + (y - j)] = colors[j * n + (y - i)];
-					new_colors[j * n + (y - i)] = k;
+					let k = colors[i * n + j];  // Top-left
+					new_colors[i * n + j] = colors[(y - j) * n + i];  // Bottom-left to top-left
+					new_colors[(y - j) * n + i] = colors[(y - i) * n + (y - j)];  // Bottom-right to bottom-left
+					new_colors[(y - i) * n + (y - j)] = colors[j * n + (y - i)];  // Top-right to bottom-right
+					new_colors[j * n + (y - i)] = k;  // Top-left to top-right
 				}
 			}
 			new_colors
@@ -200,38 +199,6 @@ impl GridSpot {
 		self.valid_patterns[pattern_idx] = true;
 	}
 	fn check_edges(&mut self, patterns: &[Pattern], args: &cmd::Args) -> bool {
-		// self.valid_patterns = self.valid_patterns.iter().enumerate().map(|(i, state)| {
-		// 	if !*state {
-		// 		return false;
-		// 	}
-
-		// 	let shift = (args.n - 1) as i32 / 2;
-
-		// 	for x in 0..args.n as i32 {
-		// 		for y in 0..args.n as i32 {
-		// 			let output_x = self.x + x - shift;
-		// 			let output_y = self.y + y - shift;
-
-		// 			let mut m = 0;
-
-		// 			// #[rustfmt::skip]
-		// 			{
-		// 				if output_x < 0                   { m |= 1 << 0; }
-		// 				if output_x >= args.dims_x as i32 { m |= 1 << 1; }
-		// 				if output_y < 0                   { m |= 1 << 2; }
-		// 				if output_y >= args.dims_y as i32 { m |= 1 << 3; }
-		// 			}
-
-		// 			let color = patterns[i].color_at(x as usize, y as usize, args.n);
-		// 			if (args.edges && color.m != m) || (!args.edges && color.m != 0) {
-		// 				return false;
-		// 			}
-		// 		}
-		// 	}
-
-		// 	true
-		// }).collect();
-
 		let mut updated = false;
 		for (i, pattern) in patterns.iter().enumerate() {
 			if !self.valid_patterns[i] {
