@@ -54,6 +54,10 @@ async fn main() {
             }
         }
 
+        if mq::is_key_pressed(mq::KeyCode::D) {
+            wave.toggle_debug();
+        }
+
         wave.draw();
 
         let fps = mq::get_fps();

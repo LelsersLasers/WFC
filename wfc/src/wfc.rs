@@ -329,13 +329,8 @@ impl Wave {
 			}
 		}
 
-
 		for i in 0..patterns.len() {
 			for j in 0..patterns.len() {
-				// if i == j {
-				// 	continue;
-				// }
-
 				for offset_x in -(args.n as i32) + 1..args.n as i32 {
 					for offset_y in -(args.n as i32) + 1..args.n as i32 {
 						if offset_x == 0 && offset_y == 0 {
@@ -377,6 +372,9 @@ impl Wave {
 	pub fn going(&self) -> bool {
 		self.going
 	}
+	pub fn toggle_debug(&mut self) {
+		self.args.debug = !self.args.debug;
+	}
 	pub fn step(&mut self) {
 		if !self.going {
 			return;
@@ -397,8 +395,12 @@ impl Wave {
 		}
 	}
 	pub fn draw(&self) {
-		let w = consts::WINDOW_WIDTH as f32 / self.args.dims_x as f32;
-		let h = consts::WINDOW_HEIGHT as f32 / self.args.dims_y as f32;
+		let w = mq::screen_width() / self.args.dims_x as f32;
+		let h = mq::screen_height() / self.args.dims_y as f32;
+
+		let font_size = (h / 2.5).round() as u16;
+
+		let border = w.min(h) / 20.0;
 
 		for spot in self.grid.iter() {
 			let mq_color = spot.calculate_mq_color(&self.patterns);
@@ -415,10 +417,22 @@ impl Wave {
 				} else if self.update_stack.contains(&(spot.x, spot.y)) {
 					mq::draw_rectangle(x, y, w, h, mq::GREEN);
 				}
-				mq::draw_rectangle(x + 2., y + 2., w - 4., h - 4., mq_color);	
+				mq::draw_rectangle(
+					x + border,
+					y + border,
+					w - border * 2.,
+					h - border * 2.,
+					mq_color
+				);	
 	
 				let text = format!("{}", count);
-				mq::draw_text(&text, x + 5., y + 20., 16., mq::WHITE);
+				let text_dims = mq::measure_text(&text, None, font_size, 1.0);
+				// mq::draw_text(&text, x + 5., y + 20., 16., mq::WHITE);
+				mq::draw_text(&text,
+					x + w / 2. - text_dims.width / 2.,
+					y + h / 2. - text_dims.height / 2. + text_dims.offset_y,
+					font_size as f32, mq::WHITE
+				);
 			}
 		}
 	}
