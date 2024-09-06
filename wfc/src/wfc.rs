@@ -125,6 +125,24 @@ impl Pattern {
 
 		Self { colors: new_colors, overlaps: self.overlaps.clone() }
 	}
+	fn flip_x(&self, n: usize) -> Self {
+		let mut new_colors = self.colors.clone();
+		for i in 0..n {
+			for j in 0..n / 2 {
+				new_colors.swap(i * n + j, i * n + (n - j - 1));
+			}
+		}
+		Self { colors: new_colors, overlaps: self.overlaps.clone() }
+	}
+	fn flip_y(&self, n: usize) -> Self {
+		let mut new_colors = self.colors.clone();
+		for i in 0..n / 2 {
+			for j in 0..n {
+				new_colors.swap(i * n + j, (n - i - 1) * n + j);
+			}
+		}
+		Self { colors: new_colors, overlaps: self.overlaps.clone() }
+	}
 	fn center_color(&self) -> Color {
 		self.colors[self.colors.len() / 2]
 	}
@@ -252,27 +270,31 @@ pub struct Wave {
 impl Wave {
 	pub fn new(src: mq::Image, args: cmd::Args) -> Self {
 		let mut patterns = Vec::new();
+
 		for x in 0..src.width() {
 			for y in 0..src.height() {
-				let pattern = Pattern::from_img(x, y, &src, &args);
-				patterns.push(pattern);
-			}
-		}
+				let base_pattern = Pattern::from_img(x, y, &src, &args);
 
-		println!("patterns: {}", patterns.len());
+				if args.flip {
+					let flipped_x = base_pattern.flip_x(args.n);
+					let flipped_y = base_pattern.flip_y(args.n);
+					let flipped_xy = flipped_x.flip_y(args.n);
 
-		if args.rotate {
-			for i in 1..4 {
-				let mut new_patterns = Vec::new();
-				for pattern in patterns.iter() {
-					new_patterns.push(pattern.rotate(args.n, i));
+					patterns.push(flipped_x);
+					patterns.push(flipped_y);
+					patterns.push(flipped_xy);
 				}
-				patterns.extend(new_patterns);
+
+				if args.rotate {
+					for i in 1..4 {
+						let rotated = base_pattern.rotate(args.n, i);
+						patterns.push(rotated);
+					}
+				}
+
+				patterns.push(base_pattern);
 			}
 		}
-		
-
-		println!("patterns: {}", patterns.len());
 
 
 		for i in 0..patterns.len() {
