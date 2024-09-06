@@ -29,6 +29,7 @@ impl PartialEq for Color {
 // -------------------------------------------------------------------------- //
 
 // -------------------------------------------------------------------------- //
+#[derive(Clone)]
 struct Pattern {
 	colors: Vec<Color>, // 2D, NxN array of colors
 	overlaps: Vec<Overlap>,
@@ -100,6 +101,30 @@ impl Pattern {
 
 		true
 	}
+	fn rotate(&self, n: usize, times: usize) -> Self {
+		fn rotate90(colors: &[Color], n: usize) -> Vec<Color> {
+			let mut new_colors = colors.to_owned();
+			let x = n / 2;
+			let y = n - 1;
+			for i in 0..x {
+				for j in i..y - i {
+					let k = colors[i * n + j];
+					new_colors[i * n + j] = colors[(y - j) * n + i];
+					new_colors[(y - j) * n + i] = colors[(y - i) * n + (y - j)];
+					new_colors[(y - i) * n + (y - j)] = colors[j * n + (y - i)];
+					new_colors[j * n + (y - i)] = k;
+				}
+			}
+			new_colors
+		}
+
+		let mut new_colors = self.colors.clone();
+		for _ in 0..times {
+			new_colors = rotate90(&new_colors, n);
+		}
+
+		Self { colors: new_colors, overlaps: self.overlaps.clone() }
+	}
 	fn center_color(&self) -> Color {
 		self.colors[self.colors.len() / 2]
 	}
@@ -121,6 +146,7 @@ impl PartialEq for Pattern {
 // -------------------------------------------------------------------------- //
 
 // -------------------------------------------------------------------------- //
+#[derive(Clone)]
 struct Overlap {
 	pattern_idx: usize,
 	offset_x: i32,
@@ -174,9 +200,9 @@ impl GridSpot {
 					// #[rustfmt::skip]
 					{
 						if output_x < 0                   { m |= 1 << 0; }
-						if output_x >= args.dims_x as i32 { m |= 1 << 1; }
+						if output_x >= args.l as i32 { m |= 1 << 1; }
 						if output_y < 0                   { m |= 1 << 2; }
-						if output_y >= args.dims_y as i32 { m |= 1 << 3; }
+						if output_y >= args.h as i32 { m |= 1 << 3; }
 					}
 
 					let color = pattern.color_at(x as usize, y as usize, args.n);
@@ -234,6 +260,22 @@ impl Wave {
 			}
 		}
 
+		println!("patterns: {}", patterns.len());
+
+		if args.rotate {
+			for i in 1..4 {
+				let mut new_patterns = Vec::new();
+				for pattern in patterns.iter() {
+					new_patterns.push(pattern.rotate(args.n, i));
+				}
+				patterns.extend(new_patterns);
+			}
+		}
+		
+
+		println!("patterns: {}", patterns.len());
+
+
 		for i in 0..patterns.len() {
 			for j in 0..patterns.len() {
 				// if i == j {
@@ -266,8 +308,8 @@ impl Wave {
 	}
 	pub fn create_grid(&mut self) {
 		self.grid.clear();
-		for x in 0..self.args.dims_x {
-			for y in 0..self.args.dims_y {
+		for x in 0..self.args.l {
+			for y in 0..self.args.h {
 				let mut grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
 			
 				if self.args.edges {
@@ -302,8 +344,8 @@ impl Wave {
 		}
 	}
 	pub fn draw(&self) {
-		let w = consts::WINDOW_WIDTH as f32 / self.args.dims_x as f32;
-		let h = consts::WINDOW_HEIGHT as f32 / self.args.dims_y as f32;
+		let w = consts::WINDOW_WIDTH as f32 / self.args.l as f32;
+		let h = consts::WINDOW_HEIGHT as f32 / self.args.h as f32;
 
 		for spot in self.grid.iter() {
 			let mq_color = spot.calculate_mq_color(&self.patterns);
@@ -398,7 +440,7 @@ impl Wave {
 		}
 
 		let pos = self.update_stack.pop().unwrap();
-		let idx = pos.0 as usize * self.args.dims_y + pos.1 as usize;
+		let idx = pos.0 as usize * self.args.h + pos.1 as usize;
 
 		let pattern_len = self.patterns.len();
 
@@ -415,8 +457,8 @@ impl Wave {
 				// let other_pos = (pos.0 + offset_x, pos.1 + offset_y);
 				let other_pos = if self.args.wrap {
 					(
-						(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
-						(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
+						(pos.0 + offset_x + self.args.l as i32) % self.args.l as i32,
+						(pos.1 + offset_y + self.args.h as i32) % self.args.h as i32
 					)
 				} else {
 					(
@@ -424,10 +466,10 @@ impl Wave {
 						pos.1 + offset_y
 					)
 				};
-				if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
+				if other_pos.0 < 0 || other_pos.0 >= self.args.l as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.h as i32 {
 					continue;
 				}
-				let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
+				let other_idx = other_pos.0 as usize * self.args.h + other_pos.1 as usize;
 
 				let mut other_possible_patterns: Vec<usize> = Vec::new();
 

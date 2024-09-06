@@ -3,10 +3,10 @@
 #[command(name = "wfc", version = "0.1.0", author = "Millan Kumar")]
 pub struct Args {
 	#[arg(short, long, default_value = "30", help = "Output width")]
-	pub dims_x: usize,
+	pub l: usize,
 
 	#[arg(short, long, default_value = "30", help = "Output height")]
-	pub dims_y: usize,
+	pub h: usize,
 
 	#[arg(short, long, default_value = "3", help = "Pattern size (must be odd)")]
 	pub n: usize,
