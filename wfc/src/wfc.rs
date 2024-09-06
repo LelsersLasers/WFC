@@ -34,27 +34,36 @@ struct Pattern {
 	overlaps: Vec<Overlap>,
 }
 impl Pattern {
-	fn from_img(center_x: usize, center_y: usize, src: &mq::Image, n: usize) -> Self {
+	fn from_img(center_x: usize, center_y: usize, src: &mq::Image, args: &cmd::Args) -> Self {
 		let mut colors = Vec::new();
-		let shift = (n - 1) as i32 / 2;
+		let shift = (args.n - 1) as i32 / 2;
 
 		let start_x = center_x as i32 - shift;
 		let start_y = center_y as i32 - shift;
 
-		let end_x = start_x + n as i32;
-		let end_y = start_y + n as i32;
+		let end_x = start_x + args.n as i32;
+		let end_y = start_y + args.n as i32;
 
 		for x in start_x..end_x {
 			for y in start_y..end_y {
-				let mut m = 0;
-
-				// #[rustfmt::skip]
-				{
-					if x < 0                    { m |= 1 << 0; }
-					if x >= src.width() as i32  { m |= 1 << 1; }
-					if y < 0                    { m |= 1 << 2; }
-					if y >= src.height() as i32 { m |= 1 << 3; }
-				}
+				let (x, y, m) = if args.wrap {
+					(
+						(x + src.width() as i32) % src.width() as i32,
+						(y + src.height() as i32) % src.height() as i32,
+						0
+					)
+				} else {
+					let mut m = 0;
+					// #[rustfmt::skip]
+					{
+						if x < 0                    { m |= 1 << 0; }
+						if x >= src.width() as i32  { m |= 1 << 1; }
+						if y < 0                    { m |= 1 << 2; }
+						if y >= src.height() as i32 { m |= 1 << 3; }
+					}
+					(x, y, m)
+				};
+				
 
 				let mq_color = if m != 0 {
 					mq::Color::new(1.0, 0.0, 1.0, 1.0)
@@ -146,17 +155,17 @@ impl GridSpot {
 		self.valid_patterns = vec![false; self.valid_patterns.len()];
 		self.valid_patterns[pattern_idx] = true;
 	}
-	fn check_edges(&mut self, patterns: &[Pattern], n: usize, dims_x: usize, dims_y: usize) -> bool {
+	fn check_edges(&mut self, patterns: &[Pattern], args: &cmd::Args) -> bool {
 		let mut updated = false;
 		for (i, pattern) in patterns.iter().enumerate() {
 			if !self.valid_patterns[i] {
 				continue;
 			}
 
-			let shift = (n - 1) as i32 / 2;
+			let shift = (args.n - 1) as i32 / 2;
 
-			for x in 0..n as i32 {
-				for y in 0..n as i32 {
+			for x in 0..args.n as i32 {
+				for y in 0..args.n as i32 {
 					let output_x = self.x + x - shift;
 					let output_y = self.y + y - shift;
 
@@ -164,13 +173,13 @@ impl GridSpot {
 
 					// #[rustfmt::skip]
 					{
-						if output_x < 0              { m |= 1 << 0; }
-						if output_x >= dims_x as i32 { m |= 1 << 1; }
-						if output_y < 0              { m |= 1 << 2; }
-						if output_y >= dims_y as i32 { m |= 1 << 3; }
+						if output_x < 0                   { m |= 1 << 0; }
+						if output_x >= args.dims_x as i32 { m |= 1 << 1; }
+						if output_y < 0                   { m |= 1 << 2; }
+						if output_y >= args.dims_y as i32 { m |= 1 << 3; }
 					}
 
-					let color = pattern.color_at(x as usize, y as usize, n);
+					let color = pattern.color_at(x as usize, y as usize, args.n);
 					if color.m != m {
 						self.valid_patterns[i] = false;
 						updated = true;
@@ -220,7 +229,7 @@ impl Wave {
 		let mut patterns = Vec::new();
 		for x in 0..src.width() {
 			for y in 0..src.height() {
-				let pattern = Pattern::from_img(x, y, &src, args.n);
+				let pattern = Pattern::from_img(x, y, &src, &args);
 				patterns.push(pattern);
 			}
 		}
@@ -261,9 +270,11 @@ impl Wave {
 			for y in 0..self.args.dims_y {
 				let mut grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
 			
-				let updated = grid_spot.check_edges(&self.patterns, self.args.n, self.args.dims_x, self.args.dims_y);
-				if updated {
-					self.add_to_stack((x as i32, y as i32));
+				if self.args.edges {
+					let updated = grid_spot.check_edges(&self.patterns, &self.args);
+					if updated {
+						self.add_to_stack((x as i32, y as i32));
+					}
 				}
 
 				self.grid.push(grid_spot);
@@ -401,7 +412,18 @@ impl Wave {
 					continue;
 				}
 
-				let other_pos = (pos.0 + offset_x, pos.1 + offset_y);
+				// let other_pos = (pos.0 + offset_x, pos.1 + offset_y);
+				let other_pos = if self.args.wrap {
+					(
+						(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
+						(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
+					)
+				} else {
+					(
+						pos.0 + offset_x,
+						pos.1 + offset_y
+					)
+				};
 				if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
 					continue;
 				}

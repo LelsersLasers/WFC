@@ -6,7 +6,6 @@ https://user-images.githubusercontent.com/48894200/221651217-e7c1dd75-c441-442c-
 
 ## TODO
 
-- Wrap
 - Rotate
 - Flip
 - Rayon

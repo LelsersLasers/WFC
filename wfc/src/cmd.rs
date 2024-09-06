@@ -14,6 +14,9 @@ pub struct Args {
 	#[arg(short, long, default_value = "false", help = "Wrap pattern around the edge")]
 	pub wrap: bool,
 
+	#[arg(short, long, default_value = "false", help = "Edges must match")]
+	pub edges: bool,
+
 	#[arg(short, long, default_value = "false", help = "Rotate patterns")]
 	pub rotate: bool,
 
