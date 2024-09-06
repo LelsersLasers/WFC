@@ -1,5 +1,6 @@
 use macroquad::prelude as mq;
-// use rayon::prelude::*;
+use rustc_hash::FxHashSet;
+use rayon::prelude::*;
 use crate::consts;
 use crate::cmd;
 
@@ -36,7 +37,7 @@ struct Pattern {
 }
 impl Pattern {
 	fn from_img(center_x: usize, center_y: usize, src: &mq::Image, args: &cmd::Args) -> Self {
-		let mut colors = Vec::new();
+		let mut colors = Vec::with_capacity(args.n * args.n);
 		let shift = (args.n - 1) as i32 / 2;
 
 		let start_x = center_x as i32 - shift;
@@ -200,6 +201,38 @@ impl GridSpot {
 		self.valid_patterns[pattern_idx] = true;
 	}
 	fn check_edges(&mut self, patterns: &[Pattern], args: &cmd::Args) -> bool {
+		// self.valid_patterns = self.valid_patterns.iter().enumerate().map(|(i, state)| {
+		// 	if !*state {
+		// 		return false;
+		// 	}
+
+		// 	let shift = (args.n - 1) as i32 / 2;
+
+		// 	for x in 0..args.n as i32 {
+		// 		for y in 0..args.n as i32 {
+		// 			let output_x = self.x + x - shift;
+		// 			let output_y = self.y + y - shift;
+
+		// 			let mut m = 0;
+
+		// 			// #[rustfmt::skip]
+		// 			{
+		// 				if output_x < 0                   { m |= 1 << 0; }
+		// 				if output_x >= args.dims_x as i32 { m |= 1 << 1; }
+		// 				if output_y < 0                   { m |= 1 << 2; }
+		// 				if output_y >= args.dims_y as i32 { m |= 1 << 3; }
+		// 			}
+
+		// 			let color = patterns[i].color_at(x as usize, y as usize, args.n);
+		// 			if (args.edges && color.m != m) || (!args.edges && color.m != 0) {
+		// 				return false;
+		// 			}
+		// 		}
+		// 	}
+
+		// 	true
+		// }).collect();
+
 		let mut updated = false;
 		for (i, pattern) in patterns.iter().enumerate() {
 			if !self.valid_patterns[i] {
@@ -320,7 +353,7 @@ impl Wave {
 
 		Self {
 			patterns,
-			grid: Vec::new(),
+			grid: Vec::with_capacity(args.dims_x * args.dims_y),
 			update_stack: Vec::new(),
 			going: true,
 			args
@@ -334,7 +367,7 @@ impl Wave {
 			
 				let updated = grid_spot.check_edges(&self.patterns, &self.args);
 				if updated {
-					self.add_to_stack((x as i32, y as i32));
+					self.update_stack.push((x as i32, y as i32));
 				}
 
 				self.grid.push(grid_spot);
@@ -349,7 +382,7 @@ impl Wave {
 			return;
 		}
 
-		let knotted = self.grid.iter().any(|spot| spot.valid_patterns.iter().filter(|&&x| x).count() == 0);
+		let knotted = self.grid.par_iter().any(|spot| spot.valid_patterns.iter().filter(|&&x| x).count() == 0);
 
 		if knotted {
 			println!("Knotted!");
@@ -421,10 +454,9 @@ impl Wave {
 		let idx = mq::rand::gen_range(0, lowest_entropy_idxs.len());
 		(false, Some(lowest_entropy_idxs[idx]))
 	}
-	fn add_to_stack(&mut self, pos: (i32, i32)) {
-		if !self.update_stack.contains(&pos) {
-			self.update_stack.push(pos);
-		}
+	fn remove_dups_from_stack(&mut self) {
+		let mut set = FxHashSet::default();
+		self.update_stack.retain(|x| set.insert(*x));
 	}
 	fn iterate(&mut self) {
 		let (finished, idx) = self.lowest_entropy_spot_idx();
@@ -439,7 +471,7 @@ impl Wave {
 		println!("idx: {}", idx);
 
 		self.grid[idx].collapse();
-		self.add_to_stack((self.grid[idx].x, self.grid[idx].y));
+		self.update_stack.push((self.grid[idx].x, self.grid[idx].y));
 	}
 	fn propagate(&mut self) {
 		if self.update_stack.is_empty() {
@@ -455,13 +487,67 @@ impl Wave {
 		let mut sorted_offsets = offsets.clone().collect::<Vec<i32>>();
 		sorted_offsets.sort_unstable_by_key(|&x| x.abs());
 
+		// sorted_offsets.clone().into_par_iter().for_each(|offset_x| {
+		// 	sorted_offsets.clone().into_iter().for_each(|offset_y| {
+		// 		if offset_x == 0 && offset_y == 0 {
+		// 			return;
+		// 		}
+
+		// 		let other_pos = if self.args.wrap_output {
+		// 			(
+		// 				(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
+		// 				(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
+		// 			)
+		// 		} else {
+		// 			(
+		// 				pos.0 + offset_x,
+		// 				pos.1 + offset_y
+		// 			)
+		// 		};
+		// 		if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
+		// 			return;
+		// 		}
+		// 		let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
+
+		// 		let other_possible_patterns = (0..pattern_len).into_iter().map(|i| {
+		// 			if !self.grid[idx].valid_patterns[i] {
+		// 				return Vec::new();
+		// 			}
+		// 			self.patterns[i].overlaps.iter().filter_map(|overlap| {
+		// 				if overlap.offset_x == offset_x && overlap.offset_y == offset_y {
+		// 					Some(overlap.pattern_idx)
+		// 				} else {
+		// 					None
+		// 				}
+		// 			}).collect::<Vec<usize>>()
+		// 		}).flatten().collect::<Vec<usize>>();
+
+		// 		// remove dups?
+
+		// 		for i in 0..pattern_len {
+		// 			if !self.grid[other_idx].valid_patterns[i] {
+		// 				continue;
+		// 			}
+		// 			if !other_possible_patterns.contains(&i) {
+		// 				self.grid[other_idx].valid_patterns[i] = false;
+
+		// 				// self.add_to_stack(other_pos);
+		// 				if !self.update_stack.contains(&other_pos) {
+		// 					self.update_stack.push(other_pos);
+		// 				}
+		// 			}
+		// 		}
+
+
+		// 	});
+		// });
+
 		for offset_x in sorted_offsets.clone() {
 			for offset_y in sorted_offsets.clone() {
 				if offset_x == 0 && offset_y == 0 {
 					continue;
 				}
 
-				// let other_pos = (pos.0 + offset_x, pos.1 + offset_y);
 				let other_pos = if self.args.wrap_output {
 					(
 						(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
@@ -478,38 +564,53 @@ impl Wave {
 				}
 				let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
 
-				let mut other_possible_patterns: Vec<usize> = Vec::new();
-
-				for i in 0..pattern_len {
+				let other_possible_patterns = (0..pattern_len).into_par_iter().map(|i| {
 					if !self.grid[idx].valid_patterns[i] {
-						continue;
+						return Vec::new();
 					}
-					let pattern = &self.patterns[i];
-					for j in 0..pattern.overlaps.len() {
-						if pattern.overlaps[j].offset_x == offset_x
-							&& pattern.overlaps[j].offset_y == offset_y
-							&& !other_possible_patterns.contains(&pattern.overlaps[j].pattern_idx)
-						{
-							other_possible_patterns.push(pattern.overlaps[j].pattern_idx);
+					self.patterns[i].overlaps.iter().filter_map(|overlap| {
+						if overlap.offset_x == offset_x && overlap.offset_y == offset_y {
+							Some(overlap.pattern_idx)
+						} else {
+							None
 						}
-					}
-				}
+					}).collect::<Vec<usize>>()
+				}).flatten().collect::<Vec<usize>>();
 
-				for i in 0..pattern_len {
-					if !self.grid[other_idx].valid_patterns[i] {
-						continue;
+				// let new_valid_patterns: Vec<(bool, Option<(i32, i32)>)> = self.grid[other_idx].valid_patterns.par_iter().enumerate().map(|(i, state)| {
+				// 	if !*state {
+				// 		return (false, None);
+				// 	}
+				// 	if !other_possible_patterns.contains(&i) {
+				// 		return (false, Some(other_pos));
+				// 	}
+				// 	(true, None)
+				// }).collect();
+
+				// for (i, (state, other_pos)) in new_valid_patterns.iter().enumerate() {
+				// 	if !state {
+				// 		self.grid[other_idx].valid_patterns[i] = false;
+
+				// 		if let Some(other_pos) = other_pos {
+				// 			self.update_stack.push(*other_pos);
+				// 		}
+				// 	}
+				// }
+
+				let update_stack = std::sync::Mutex::new(&mut self.update_stack);
+				self.grid[other_idx].valid_patterns.par_iter_mut().enumerate().for_each(|(i, state)| {
+					if !*state {
+						return;
 					}
 					if !other_possible_patterns.contains(&i) {
-						self.grid[other_idx].valid_patterns[i] = false;
-
-						// self.add_to_stack(other_pos);
-						if !self.update_stack.contains(&other_pos) {
-							self.update_stack.push(other_pos);
-						}
+						*state = false;
+						// self.update_stack.push(other_pos);
+						update_stack.lock().unwrap().push(other_pos);
 					}
-				}
+				});
 			}
 		}
+		self.remove_dups_from_stack();
 	}
 }
 // -------------------------------------------------------------------------- //

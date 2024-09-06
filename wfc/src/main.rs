@@ -77,7 +77,9 @@ async fn main() {
 
         steps_per_frame = steps_per_frame.max(1);
 
-        mq::draw_text(&format!("FPS: {} ({})", fps, steps_per_frame), 10.0, 20.0, 20.0, mq::WHITE);
+        // mq::draw_text(&format!("FPS: {} ({})", fps, steps_per_frame), 10.0, 20.0, 20.0, mq::BLACK);
+        // mq::draw_text(&format!("FPS: {} ({})", fps, steps_per_frame), 11.0, 21.0, 20.0, mq::WHITE);
+        println!("FPS: {} ({})", fps, steps_per_frame);
 
 
         mq::next_frame().await

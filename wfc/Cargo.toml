@@ -10,4 +10,5 @@ macroquad = "0.4.13"
 instant = "0.1"
 clap = { version = "4.5.17", features = ["derive"] }
 
-# rayon = "1.10.0"
+rayon = "1.10.0"
+rustc-hash = "2.0.0"
