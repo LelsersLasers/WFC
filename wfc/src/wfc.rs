@@ -497,62 +497,59 @@ impl Wave {
 		let pattern_len = self.patterns.len();
 
 		let offsets = -(self.args.n as i32) + 1..self.args.n as i32;
-		let mut sorted_offsets = offsets.clone().collect::<Vec<i32>>();
-		sorted_offsets.sort_unstable_by_key(|&x| x.abs());
+		let mut sorted_offsets = offsets
+			.clone()
+			.flat_map(|x| offsets.clone().map(move |y| (x, y)))
+			.filter(|(x, y)| *x != 0 || *y != 0)
+			.collect::<Vec<(i32, i32)>>();
+		sorted_offsets.sort_unstable_by_key(|(x, y)| x.pow(2) + y.pow(2));
 
 		let update_stack = std::sync::Mutex::new(&mut self.update_stack);
 		let grid = std::sync::Mutex::new(&mut self.grid);
 
-		sorted_offsets.clone().into_par_iter().for_each(|offset_x| {
-			sorted_offsets.clone().into_par_iter().for_each(|offset_y| {
-				if offset_x == 0 && offset_y == 0 {
-					return;
+		sorted_offsets.clone().into_par_iter().for_each(|(offset_x, offset_y)| {
+			let other_pos = if self.args.wrap_output {
+				(
+					(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
+					(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
+				)
+			} else {
+				(
+					pos.0 + offset_x,
+					pos.1 + offset_y
+				)
+			};
+			if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
+				return;
+			}
+			let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
+
+			let current_valid_patterns = grid.lock().unwrap()[idx].valid_patterns.clone();
+			let other_possible_patterns = (0..pattern_len).flat_map(|i| {
+				if !current_valid_patterns[i] {
+					return Vec::new();
 				}
+				self.patterns[i].overlaps.iter().filter_map(|overlap| {
+					if overlap.offset_x == offset_x && overlap.offset_y == offset_y {
+						Some(overlap.pattern_idx)
+					} else {
+						None
+					}
+				}).collect::<Vec<usize>>()
+			}).collect::<Vec<usize>>();
 
-				let other_pos = if self.args.wrap_output {
-					(
-						(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
-						(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
-					)
-				} else {
-					(
-						pos.0 + offset_x,
-						pos.1 + offset_y
-					)
-				};
-				if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
-					return;
+			let old_valid_patterns = grid.lock().unwrap()[other_idx].valid_patterns.clone();
+			let new_valid_patterns = old_valid_patterns.iter().enumerate().map(|(i, state)| {
+				if !*state {
+					return false;
 				}
-				let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
-
-				let current_valid_patterns = grid.lock().unwrap()[idx].valid_patterns.clone();
-				let other_possible_patterns = (0..pattern_len).flat_map(|i| {
-					if !current_valid_patterns[i] {
-						return Vec::new();
-					}
-					self.patterns[i].overlaps.iter().filter_map(|overlap| {
-						if overlap.offset_x == offset_x && overlap.offset_y == offset_y {
-							Some(overlap.pattern_idx)
-						} else {
-							None
-						}
-					}).collect::<Vec<usize>>()
-				}).collect::<Vec<usize>>();
-
-				let old_valid_patterns = grid.lock().unwrap()[other_idx].valid_patterns.clone();
-				let new_valid_patterns = old_valid_patterns.iter().enumerate().map(|(i, state)| {
-					if !*state {
-						return false;
-					}
-					if !other_possible_patterns.contains(&i) {
-						update_stack.lock().unwrap().push(other_pos);
-						return false;
-					}
-					true
-				}).collect::<Vec<bool>>();
-				// grid.lock().unwrap()[other_idx].valid_patterns = new_valid_patterns;
-				grid.lock().unwrap()[other_idx].valid_patterns = new_valid_patterns;
-			});
+				if !other_possible_patterns.contains(&i) {
+					update_stack.lock().unwrap().push(other_pos);
+					return false;
+				}
+				true
+			}).collect::<Vec<bool>>();
+			grid.lock().unwrap()[other_idx].valid_patterns = new_valid_patterns;
 		});
 
 		self.remove_dups_from_stack();
