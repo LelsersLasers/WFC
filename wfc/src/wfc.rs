@@ -407,7 +407,7 @@ impl Wave {
 
 			let count = spot.valid_patterns.iter().filter(|&&x| x).count();
 
-			if !self.going {
+			if !self.going || !self.args.debug {
 				mq::draw_rectangle(x, y, w, h, mq_color);
 			} else {
 				if count == 1 {

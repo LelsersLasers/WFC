@@ -6,9 +6,6 @@ https://user-images.githubusercontent.com/48894200/221651217-e7c1dd75-c441-442c-
 
 ## TODO
 
-- Better logic for checking which patterns go next to each other
-	- Just do it by location in the input image
+- Improve performance on `Wave::iterate()`
+- Improve debug drawing (make sizes scale)
 - Improve args logic (edges, wraps, flips, rotates, etc)
-- Performance
-	- Better algorithm
-	- Rayon

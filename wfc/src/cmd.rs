@@ -26,6 +26,9 @@ pub struct Args {
 	#[arg(long, default_value = "false", help = "Flip patterns")]
 	pub flip: bool,
 
+	#[arg(long, help = "Show debug info")]
+	pub debug: bool,
+
 	#[arg(long, help = "Input path")]
 	pub input: std::path::PathBuf
 }

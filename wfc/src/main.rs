@@ -48,19 +48,6 @@ async fn main() {
 
     loop {
         mq::clear_background(consts::CLEAR_COLOR);
-
-        // for _ in 0..4 {
-        //     if wave.going() {
-        //         wave.step();
-        //     }
-        // }
-        // if wave.going() && mq::is_key_pressed(mq::KeyCode::Space) {
-        //     wave.step();
-        // }
-        // if wave.going() {
-        //     wave.step();
-        // }
-
         for _ in 0..steps_per_frame {
             if wave.going() {
                 wave.step();
@@ -79,7 +66,7 @@ async fn main() {
         fpses = fpses[start..].to_vec();
         let avg_fps = fpses.iter().sum::<i32>() as f32 / fpses.len() as f32;
 
-        if avg_fps.round() as u32 > consts::TARGET_FPS && wave.going() {
+        if fps as u32 > consts::TARGET_FPS && wave.going() {
             steps_per_frame += 1;
         } else {
             steps_per_frame -= 1;
@@ -87,8 +74,9 @@ async fn main() {
 
         steps_per_frame = steps_per_frame.max(1);
 
-        mq::draw_text(&format!("FPS: {:.1} ({})", avg_fps, steps_per_frame), 0.0, 10.0, 20.0, mq::PURPLE);
-        // println!("FPS: {:.2} ({})", avg_fps, steps_per_frame);
+        if wave.going() {
+            mq::draw_text(&format!("FPS: {:.1} ({})", avg_fps, steps_per_frame), 0.0, 20.0, 40.0, mq::BLUE);
+        }
 
 
         mq::next_frame().await
