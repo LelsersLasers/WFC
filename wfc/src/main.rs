@@ -9,9 +9,9 @@ mod wfc;
 fn window_conf() -> mq::Conf {
     mq::Conf {
         window_title: "WFC".to_owned(),
-        window_width: consts::WINDOW_WIDTH as i32,
-        window_height: consts::WINDOW_HEIGHT as i32,
-        window_resizable: false,
+        window_width: consts::WINDOW_SIZE as i32,
+        window_height: consts::WINDOW_SIZE as i32,
+        window_resizable: true,
         ..Default::default()
     }
 }
@@ -32,6 +32,11 @@ async fn main() {
         &file_bytes,
         Some(mq::ImageFormat::Png),
     ).unwrap();
+
+    let scale = mq::screen_width() / args.dims_x.max(args.dims_y) as f32;
+    let w = args.dims_x as f32 * scale;
+    let h = args.dims_y as f32 * scale;
+    mq::request_new_screen_size(w, h);
 
 
     let mut wave = wfc::Wave::new(src, args);
@@ -79,7 +84,8 @@ async fn main() {
         steps_per_frame = steps_per_frame.max(1);
 
         if wave.going() {
-            mq::draw_text(&format!("FPS: {:.1} ({})", avg_fps, steps_per_frame), 0.0, 20.0, 40.0, mq::BLUE);
+            let font_size = mq::screen_height() / 20.;
+            mq::draw_text(&format!("FPS: {:.1} ({})", avg_fps, steps_per_frame), 0., font_size / 2., font_size, mq::BLUE);
         }
 
 

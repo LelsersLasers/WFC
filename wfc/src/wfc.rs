@@ -1,7 +1,6 @@
 use macroquad::prelude as mq;
 use rustc_hash::FxHashSet;
 use rayon::prelude::*;
-use crate::consts;
 use crate::cmd;
 
 // -------------------------------------------------------------------------- //
