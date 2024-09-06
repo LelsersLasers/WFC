@@ -47,7 +47,7 @@ impl Pattern {
 
 		for x in start_x..end_x {
 			for y in start_y..end_y {
-				let (x, y, m) = if args.wrap {
+				let (x, y, m) = if args.wrap_input {
 					(
 						(x + src.width() as i32) % src.width() as i32,
 						(y + src.height() as i32) % src.height() as i32,
@@ -200,9 +200,9 @@ impl GridSpot {
 					// #[rustfmt::skip]
 					{
 						if output_x < 0                   { m |= 1 << 0; }
-						if output_x >= args.l as i32 { m |= 1 << 1; }
+						if output_x >= args.dims_x as i32 { m |= 1 << 1; }
 						if output_y < 0                   { m |= 1 << 2; }
-						if output_y >= args.h as i32 { m |= 1 << 3; }
+						if output_y >= args.dims_y as i32 { m |= 1 << 3; }
 					}
 
 					let color = pattern.color_at(x as usize, y as usize, args.n);
@@ -247,7 +247,6 @@ pub struct Wave {
 	grid: Vec<GridSpot>,
 	update_stack: Vec<(i32, i32)>,
 	going: bool,
-	knotted: bool,
 	args: cmd::Args,
 }
 impl Wave {
@@ -302,14 +301,13 @@ impl Wave {
 			grid: Vec::new(),
 			update_stack: Vec::new(),
 			going: true,
-			knotted: false,
 			args
 		}
 	}
 	pub fn create_grid(&mut self) {
 		self.grid.clear();
-		for x in 0..self.args.l {
-			for y in 0..self.args.h {
+		for x in 0..self.args.dims_x {
+			for y in 0..self.args.dims_y {
 				let mut grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
 			
 				if self.args.edges {
@@ -331,10 +329,12 @@ impl Wave {
 			return;
 		}
 
-		if self.knotted {
+		let knotted = self.grid.iter().any(|spot| spot.valid_patterns.iter().filter(|&&x| x).count() == 0);
+
+		if knotted {
+			println!("Knotted!");
 			self.update_stack.clear();
 			self.create_grid();
-			self.knotted = false;
 		}
 
 		if self.update_stack.is_empty() {
@@ -344,8 +344,8 @@ impl Wave {
 		}
 	}
 	pub fn draw(&self) {
-		let w = consts::WINDOW_WIDTH as f32 / self.args.l as f32;
-		let h = consts::WINDOW_HEIGHT as f32 / self.args.h as f32;
+		let w = consts::WINDOW_WIDTH as f32 / self.args.dims_x as f32;
+		let h = consts::WINDOW_HEIGHT as f32 / self.args.dims_y as f32;
 
 		for spot in self.grid.iter() {
 			let mq_color = spot.calculate_mq_color(&self.patterns);
@@ -369,19 +369,13 @@ impl Wave {
 			}
 		}
 	}
-	fn lowest_entropy_spot_idx(&self) -> (bool, bool, Option<usize>) {
+	fn lowest_entropy_spot_idx(&self) -> (bool, Option<usize>) {
 		let mut lowest_entropy = usize::MAX;
 		let mut lowest_entropy_idxs = Vec::new();
 		let mut finished = true;
-		let mut knotted = false;
 
 		for (i, spot) in self.grid.iter().enumerate() {
 			let count = spot.valid_patterns.iter().filter(|&&x| x).count();
-			if count == 0 {
-				println!("Knotted: {}", i);
-				knotted = true;
-				break;
-			}
 			if count > 1 {
 				finished = false;
 				match count.cmp(&lowest_entropy) {
@@ -398,17 +392,14 @@ impl Wave {
 			}
 		}
 
-		if knotted {
-			return (true, false, None);
-		}
 		if finished {
-			return (false, true, None);
+			return (true, None);
 		}
 
 		println!("lowest_entropy_idxs: {} ({})", lowest_entropy_idxs.len(), lowest_entropy);
 
 		let idx = mq::rand::gen_range(0, lowest_entropy_idxs.len());
-		(false, false, Some(lowest_entropy_idxs[idx]))
+		(false, Some(lowest_entropy_idxs[idx]))
 	}
 	fn add_to_stack(&mut self, pos: (i32, i32)) {
 		if !self.update_stack.contains(&pos) {
@@ -416,12 +407,8 @@ impl Wave {
 		}
 	}
 	fn iterate(&mut self) {
-		let (knotted, finished, idx) = self.lowest_entropy_spot_idx();
-		if knotted {
-			self.knotted = true;
-			println!("Knotted!");
-			return;
-		}
+		let (finished, idx) = self.lowest_entropy_spot_idx();
+
 		if finished {
 			self.going = false;
 			println!("Finished!");
@@ -440,7 +427,7 @@ impl Wave {
 		}
 
 		let pos = self.update_stack.pop().unwrap();
-		let idx = pos.0 as usize * self.args.h + pos.1 as usize;
+		let idx = pos.0 as usize * self.args.dims_y + pos.1 as usize;
 
 		let pattern_len = self.patterns.len();
 
@@ -455,10 +442,10 @@ impl Wave {
 				}
 
 				// let other_pos = (pos.0 + offset_x, pos.1 + offset_y);
-				let other_pos = if self.args.wrap {
+				let other_pos = if self.args.wrap_output {
 					(
-						(pos.0 + offset_x + self.args.l as i32) % self.args.l as i32,
-						(pos.1 + offset_y + self.args.h as i32) % self.args.h as i32
+						(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
+						(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
 					)
 				} else {
 					(
@@ -466,10 +453,10 @@ impl Wave {
 						pos.1 + offset_y
 					)
 				};
-				if other_pos.0 < 0 || other_pos.0 >= self.args.l as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.h as i32 {
+				if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
 					continue;
 				}
-				let other_idx = other_pos.0 as usize * self.args.h + other_pos.1 as usize;
+				let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
 
 				let mut other_possible_patterns: Vec<usize> = Vec::new();
 

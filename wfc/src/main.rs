@@ -23,6 +23,9 @@ async fn main() {
     if args.n % 2 == 0 {
         panic!("Pattern size must be odd");
     }
+    if args.edges && (args.wrap_input || args.wrap_output) {
+        panic!("Cannot use edges with wrap");
+    }
 
     let file_bytes = std::fs::read(&args.input).unwrap_or_else(|_| panic!("Could not read input file"));
     let src = mq::Image::from_file_with_format(
