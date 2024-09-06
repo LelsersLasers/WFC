@@ -1,5 +1,7 @@
 use macroquad::prelude as mq;
+use clap::Parser;
 
+mod cmd;
 mod consts;
 mod wfc;
 
@@ -16,14 +18,20 @@ fn window_conf() -> mq::Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    let args = cmd::Args::parse();
 
+    if args.n % 2 == 0 {
+        panic!("Pattern size must be odd");
+    }
+
+    let file_bytes = std::fs::read(&args.input).unwrap_or_else(|_| panic!("Could not read input file"));
     let src = mq::Image::from_file_with_format(
-        include_bytes!("../samples/ColoredCity.png"),
+        &file_bytes,
         Some(mq::ImageFormat::Png),
     ).unwrap();
 
 
-    let mut wave = wfc::Wave::new(src);
+    let mut wave = wfc::Wave::new(src, args);
     wave.create_grid();
 
 

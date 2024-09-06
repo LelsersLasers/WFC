@@ -1,6 +1,7 @@
 use macroquad::prelude as mq;
 // use rayon::prelude::*;
 use crate::consts;
+use crate::cmd;
 
 // -------------------------------------------------------------------------- //
 #[derive(Copy, Clone)]
@@ -33,15 +34,15 @@ struct Pattern {
 	overlaps: Vec<Overlap>,
 }
 impl Pattern {
-	fn from_img(center_x: usize, center_y: usize, src: &mq::Image) -> Self {
+	fn from_img(center_x: usize, center_y: usize, src: &mq::Image, n: usize) -> Self {
 		let mut colors = Vec::new();
-		let shift = (consts::N - 1) as i32 / 2;
+		let shift = (n - 1) as i32 / 2;
 
 		let start_x = center_x as i32 - shift;
 		let start_y = center_y as i32 - shift;
 
-		let end_x = start_x + consts::N as i32;
-		let end_y = start_y + consts::N as i32;
+		let end_x = start_x + n as i32;
+		let end_y = start_y + n as i32;
 
 		for x in start_x..end_x {
 			for y in start_y..end_y {
@@ -68,20 +69,20 @@ impl Pattern {
 
 		Self { colors, overlaps: Vec::new() }
 	}
-	fn color_at(&self, x: usize, y: usize) -> Color {
-		self.colors[x * consts::N + y]
+	fn color_at(&self, x: usize, y: usize, n: usize) -> Color {
+		self.colors[x * n + y]
 	}
-	fn can_go_next_to(&self, other: &Self, offset_x: i32, offset_y: i32) -> bool {
-		for pattern_x in 0..consts::N as i32 {
-			for pattern_y in 0..consts::N as i32 {
+	fn can_go_next_to(&self, other: &Self, offset_x: i32, offset_y: i32, n: usize) -> bool {
+		for pattern_x in 0..n as i32 {
+			for pattern_y in 0..n as i32 {
 				let other_pattern_x = pattern_x - offset_x;
 				let other_pattern_y = pattern_y - offset_y;
 
-				if other_pattern_x < 0 || other_pattern_x >= consts::N as i32 || other_pattern_y < 0 || other_pattern_y >= consts::N as i32 {
+				if other_pattern_x < 0 || other_pattern_x >= n as i32 || other_pattern_y < 0 || other_pattern_y >= n as i32 {
 					continue;
 				}
-				let color = self.color_at(pattern_x as usize, pattern_y as usize);
-				let other_color = other.color_at(other_pattern_x as usize, other_pattern_y as usize);
+				let color = self.color_at(pattern_x as usize, pattern_y as usize, n);
+				let other_color = other.color_at(other_pattern_x as usize, other_pattern_y as usize, n);
 				if color != other_color {
 					return false;
 				}
@@ -145,17 +146,17 @@ impl GridSpot {
 		self.valid_patterns = vec![false; self.valid_patterns.len()];
 		self.valid_patterns[pattern_idx] = true;
 	}
-	fn check_edges(&mut self, patterns: &[Pattern]) -> bool {
+	fn check_edges(&mut self, patterns: &[Pattern], n: usize, dims_x: usize, dims_y: usize) -> bool {
 		let mut updated = false;
 		for (i, pattern) in patterns.iter().enumerate() {
 			if !self.valid_patterns[i] {
 				continue;
 			}
 
-			let shift = (consts::N - 1) as i32 / 2;
+			let shift = (n - 1) as i32 / 2;
 
-			for x in 0..consts::N as i32 {
-				for y in 0..consts::N as i32 {
+			for x in 0..n as i32 {
+				for y in 0..n as i32 {
 					let output_x = self.x + x - shift;
 					let output_y = self.y + y - shift;
 
@@ -163,13 +164,13 @@ impl GridSpot {
 
 					// #[rustfmt::skip]
 					{
-						if output_x < 0                      { m |= 1 << 0; }
-						if output_x >= consts::DIMS_X as i32 { m |= 1 << 1; }
-						if output_y < 0                      { m |= 1 << 2; }
-						if output_y >= consts::DIMS_Y as i32 { m |= 1 << 3; }
+						if output_x < 0              { m |= 1 << 0; }
+						if output_x >= dims_x as i32 { m |= 1 << 1; }
+						if output_y < 0              { m |= 1 << 2; }
+						if output_y >= dims_y as i32 { m |= 1 << 3; }
 					}
 
-					let color = pattern.color_at(x as usize, y as usize);
+					let color = pattern.color_at(x as usize, y as usize, n);
 					if color.m != m {
 						self.valid_patterns[i] = false;
 						updated = true;
@@ -212,13 +213,14 @@ pub struct Wave {
 	update_stack: Vec<(i32, i32)>,
 	going: bool,
 	knotted: bool,
+	args: cmd::Args,
 }
 impl Wave {
-	pub fn new(src: mq::Image) -> Self {
+	pub fn new(src: mq::Image, args: cmd::Args) -> Self {
 		let mut patterns = Vec::new();
 		for x in 0..src.width() {
 			for y in 0..src.height() {
-				let pattern = Pattern::from_img(x, y, &src);
+				let pattern = Pattern::from_img(x, y, &src, args.n);
 				patterns.push(pattern);
 			}
 		}
@@ -229,13 +231,13 @@ impl Wave {
 				// 	continue;
 				// }
 
-				for offset_x in -(consts::N as i32) + 1..consts::N as i32 {
-					for offset_y in -(consts::N as i32) + 1..consts::N as i32 {
+				for offset_x in -(args.n as i32) + 1..args.n as i32 {
+					for offset_y in -(args.n as i32) + 1..args.n as i32 {
 						if offset_x == 0 && offset_y == 0 {
 							continue;
 						}
 
-						if patterns[i].can_go_next_to(&patterns[j], offset_x, offset_y) {
+						if patterns[i].can_go_next_to(&patterns[j], offset_x, offset_y, args.n) {
 							let overlap = Overlap::new(j, offset_x, offset_y);
 							patterns[i].overlaps.push(overlap);
 						}
@@ -244,15 +246,22 @@ impl Wave {
 			}
 		}
 
-		Self { patterns, grid: Vec::new(), update_stack: Vec::new(), going: true, knotted: false }
+		Self {
+			patterns,
+			grid: Vec::new(),
+			update_stack: Vec::new(),
+			going: true,
+			knotted: false,
+			args
+		}
 	}
 	pub fn create_grid(&mut self) {
 		self.grid.clear();
-		for x in 0..consts::DIMS_X {
-			for y in 0..consts::DIMS_Y {
+		for x in 0..self.args.dims_x {
+			for y in 0..self.args.dims_y {
 				let mut grid_spot = GridSpot::new(x as i32, y as i32, self.patterns.len());
 			
-				let updated = grid_spot.check_edges(&self.patterns);
+				let updated = grid_spot.check_edges(&self.patterns, self.args.n, self.args.dims_x, self.args.dims_y);
 				if updated {
 					self.add_to_stack((x as i32, y as i32));
 				}
@@ -282,8 +291,8 @@ impl Wave {
 		}
 	}
 	pub fn draw(&self) {
-		let w = consts::WINDOW_WIDTH as f32 / consts::DIMS_X as f32;
-		let h = consts::WINDOW_HEIGHT as f32 / consts::DIMS_Y as f32;
+		let w = consts::WINDOW_WIDTH as f32 / self.args.dims_x as f32;
+		let h = consts::WINDOW_HEIGHT as f32 / self.args.dims_y as f32;
 
 		for spot in self.grid.iter() {
 			let mq_color = spot.calculate_mq_color(&self.patterns);
@@ -378,11 +387,11 @@ impl Wave {
 		}
 
 		let pos = self.update_stack.pop().unwrap();
-		let idx = pos.0 as usize * consts::DIMS_Y + pos.1 as usize;
+		let idx = pos.0 as usize * self.args.dims_y + pos.1 as usize;
 
 		let pattern_len = self.patterns.len();
 
-		let offsets = -(consts::N as i32) + 1..consts::N as i32;
+		let offsets = -(self.args.n as i32) + 1..self.args.n as i32;
 		let mut sorted_offsets = offsets.clone().collect::<Vec<i32>>();
 		sorted_offsets.sort_unstable_by_key(|&x| x.abs());
 
@@ -393,10 +402,10 @@ impl Wave {
 				}
 
 				let other_pos = (pos.0 + offset_x, pos.1 + offset_y);
-				if other_pos.0 < 0 || other_pos.0 >= consts::DIMS_X as i32 || other_pos.1 < 0 || other_pos.1 >= consts::DIMS_Y as i32 {
+				if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
 					continue;
 				}
-				let other_idx = other_pos.0 as usize * consts::DIMS_Y + other_pos.1 as usize;
+				let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
 
 				let mut other_possible_patterns: Vec<usize> = Vec::new();
 
