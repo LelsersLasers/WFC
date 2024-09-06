@@ -6,6 +6,6 @@ https://user-images.githubusercontent.com/48894200/221651217-e7c1dd75-c441-442c-
 
 ## TODO
 
-- Improve performance on `Wave::iterate()`
 - Improve debug drawing (make sizes scale)
+- I don't think the logic is right when the edges are off????
 - Improve args logic (edges, wraps, flips, rotates, etc)
