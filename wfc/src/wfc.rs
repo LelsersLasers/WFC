@@ -487,65 +487,13 @@ impl Wave {
 		let mut sorted_offsets = offsets.clone().collect::<Vec<i32>>();
 		sorted_offsets.sort_unstable_by_key(|&x| x.abs());
 
-		// sorted_offsets.clone().into_par_iter().for_each(|offset_x| {
-		// 	sorted_offsets.clone().into_iter().for_each(|offset_y| {
-		// 		if offset_x == 0 && offset_y == 0 {
-		// 			return;
-		// 		}
+		let update_stack = std::sync::Mutex::new(&mut self.update_stack);
+		let grid = std::sync::Mutex::new(&mut self.grid);
 
-		// 		let other_pos = if self.args.wrap_output {
-		// 			(
-		// 				(pos.0 + offset_x + self.args.dims_x as i32) % self.args.dims_x as i32,
-		// 				(pos.1 + offset_y + self.args.dims_y as i32) % self.args.dims_y as i32
-		// 			)
-		// 		} else {
-		// 			(
-		// 				pos.0 + offset_x,
-		// 				pos.1 + offset_y
-		// 			)
-		// 		};
-		// 		if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
-		// 			return;
-		// 		}
-		// 		let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
-
-		// 		let other_possible_patterns = (0..pattern_len).into_iter().map(|i| {
-		// 			if !self.grid[idx].valid_patterns[i] {
-		// 				return Vec::new();
-		// 			}
-		// 			self.patterns[i].overlaps.iter().filter_map(|overlap| {
-		// 				if overlap.offset_x == offset_x && overlap.offset_y == offset_y {
-		// 					Some(overlap.pattern_idx)
-		// 				} else {
-		// 					None
-		// 				}
-		// 			}).collect::<Vec<usize>>()
-		// 		}).flatten().collect::<Vec<usize>>();
-
-		// 		// remove dups?
-
-		// 		for i in 0..pattern_len {
-		// 			if !self.grid[other_idx].valid_patterns[i] {
-		// 				continue;
-		// 			}
-		// 			if !other_possible_patterns.contains(&i) {
-		// 				self.grid[other_idx].valid_patterns[i] = false;
-
-		// 				// self.add_to_stack(other_pos);
-		// 				if !self.update_stack.contains(&other_pos) {
-		// 					self.update_stack.push(other_pos);
-		// 				}
-		// 			}
-		// 		}
-
-
-		// 	});
-		// });
-
-		for offset_x in sorted_offsets.clone() {
-			for offset_y in sorted_offsets.clone() {
+		sorted_offsets.clone().into_par_iter().for_each(|offset_x| {
+			sorted_offsets.clone().into_par_iter().for_each(|offset_y| {
 				if offset_x == 0 && offset_y == 0 {
-					continue;
+					return;
 				}
 
 				let other_pos = if self.args.wrap_output {
@@ -560,12 +508,13 @@ impl Wave {
 					)
 				};
 				if other_pos.0 < 0 || other_pos.0 >= self.args.dims_x as i32 || other_pos.1 < 0 || other_pos.1 >= self.args.dims_y as i32 {
-					continue;
+					return;
 				}
 				let other_idx = other_pos.0 as usize * self.args.dims_y + other_pos.1 as usize;
 
-				let other_possible_patterns = (0..pattern_len).into_par_iter().map(|i| {
-					if !self.grid[idx].valid_patterns[i] {
+				let current_valid_patterns = grid.lock().unwrap()[idx].valid_patterns.clone();
+				let other_possible_patterns = (0..pattern_len).flat_map(|i| {
+					if !current_valid_patterns[i] {
 						return Vec::new();
 					}
 					self.patterns[i].overlaps.iter().filter_map(|overlap| {
@@ -575,41 +524,24 @@ impl Wave {
 							None
 						}
 					}).collect::<Vec<usize>>()
-				}).flatten().collect::<Vec<usize>>();
+				}).collect::<Vec<usize>>();
 
-				// let new_valid_patterns: Vec<(bool, Option<(i32, i32)>)> = self.grid[other_idx].valid_patterns.par_iter().enumerate().map(|(i, state)| {
-				// 	if !*state {
-				// 		return (false, None);
-				// 	}
-				// 	if !other_possible_patterns.contains(&i) {
-				// 		return (false, Some(other_pos));
-				// 	}
-				// 	(true, None)
-				// }).collect();
-
-				// for (i, (state, other_pos)) in new_valid_patterns.iter().enumerate() {
-				// 	if !state {
-				// 		self.grid[other_idx].valid_patterns[i] = false;
-
-				// 		if let Some(other_pos) = other_pos {
-				// 			self.update_stack.push(*other_pos);
-				// 		}
-				// 	}
-				// }
-
-				let update_stack = std::sync::Mutex::new(&mut self.update_stack);
-				self.grid[other_idx].valid_patterns.par_iter_mut().enumerate().for_each(|(i, state)| {
+				let old_valid_patterns = grid.lock().unwrap()[other_idx].valid_patterns.clone();
+				let new_valid_patterns = old_valid_patterns.iter().enumerate().map(|(i, state)| {
 					if !*state {
-						return;
+						return false;
 					}
 					if !other_possible_patterns.contains(&i) {
-						*state = false;
-						// self.update_stack.push(other_pos);
 						update_stack.lock().unwrap().push(other_pos);
+						return false;
 					}
-				});
-			}
-		}
+					true
+				}).collect::<Vec<bool>>();
+				// grid.lock().unwrap()[other_idx].valid_patterns = new_valid_patterns;
+				grid.lock().unwrap()[other_idx].valid_patterns = new_valid_patterns;
+			});
+		});
+
 		self.remove_dups_from_stack();
 	}
 }
