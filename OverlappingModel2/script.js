@@ -748,53 +748,67 @@ function findLowestEntropySpots() {
 function propagate() {
     let currentIdx = stack.pop();
 
-    for (let offsetX = -N + 1; offsetX < N; offsetX++) {
-        for (let offsetY = -N + 1; offsetY < N; offsetY++) {
 
-            if (offsetX == 0 && offsetY == 0) {
-                continue;
+    const offsets = [];
+    for (let i = -(N - 1); i < N; i++) {
+        offsets.push(i);
+    }
+    const sorted_offsets = [];
+    offsets.forEach(x => {
+        offsets.forEach(y => {
+            if (x !== 0 || y !== 0) {
+                sorted_offsets.push([x, y]);
             }
+        });
+    });
+    sorted_offsets.sort((a, b) => {
+        const [x1, y1] = a;
+        const [x2, y2] = b;
+        return (x1 ** 2 + y1 ** 2) - (x2 ** 2 + y2 ** 2);
+    });
 
-            let otherIdx = [
-                currentIdx[0] + offsetX,
-                currentIdx[1] + offsetY
-            ];
+    for (let i = 0; i < sorted_offsets.length; i++) {
+        const [offsetX, offsetY] = sorted_offsets[i];
 
-            if (WRAP) {
-                otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
-                otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
-            } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
-                continue;
-            }
+        let otherIdx = [
+            currentIdx[0] + offsetX,
+            currentIdx[1] + offsetY
+        ];
 
-            // use versions without duplicates
-            let otherPossiblePatterns = grid[otherIdx[0]][otherIdx[1]].validStates;
-            let currentPossiblePatterns = grid[currentIdx[0]][currentIdx[1]].validStates;
+        if (WRAP) {
+            otherIdx[0] = (otherIdx[0] + DIMS_X) % DIMS_X;
+            otherIdx[1] = (otherIdx[1] + DIMS_Y) % DIMS_Y;
+        } else if (otherIdx[0] < 0 || otherIdx[0] >= DIMS_X || otherIdx[1] < 0 || otherIdx[1] >= DIMS_Y) {
+            continue;
+        }
 
-            // for every still possible pattern at the current spot, get the overlaps for the matching offset
-            let currentPossibleOverlaps = [];
-            for (let i = 0; i < currentPossiblePatterns.length; i++) {
-                let pattern = currentPossiblePatterns[i];
-                for (let j = 0; j < pattern.overlaps.length; j++) { // for every overlap
-                    let overlap = pattern.overlaps[j];
-                    // if overlap matches offset and is not already added
-                    // !some is !includes but with 'match' instead of '=='
-                    if (overlap.offsetX == offsetX && overlap.offsetY == offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
-                        currentPossibleOverlaps.push(overlap);
-                    }
+        // use versions without duplicates
+        let otherPossiblePatterns = grid[otherIdx[0]][otherIdx[1]].validStates;
+        let currentPossiblePatterns = grid[currentIdx[0]][currentIdx[1]].validStates;
+
+        // for every still possible pattern at the current spot, get the overlaps for the matching offset
+        let currentPossibleOverlaps = [];
+        for (let j = 0; j < currentPossiblePatterns.length; j++) {
+            let pattern = currentPossiblePatterns[j];
+            for (let k = 0; k < pattern.overlaps.length; k++) { // for every overlap
+                let overlap = pattern.overlaps[k];
+                // if overlap matches offset and is not already added
+                // !some is !includes but with 'match' instead of '=='
+                if (overlap.offsetX == offsetX && overlap.offsetY == offsetY && !currentPossibleOverlaps.some(o => o.matches(overlap))) {
+                    currentPossibleOverlaps.push(overlap);
                 }
             }
-            // for every still possible pattern at the other spot, the pattern is in one of the possible overlaps
-            for (let i = otherPossiblePatterns.length - 1; i >= 0 ; i--) {
-                let otherPattern = otherPossiblePatterns[i];
-                let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
-                // if there are no overlaps that match the pattern, remove it
-                if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
-                    otherPossiblePatterns.splice(i, 1); // remove 1 element, starting from index i
-                    grid[otherIdx[0]][otherIdx[1]].updateValidPatterns();
+        }
+        // for every still possible pattern at the other spot, the pattern is in one of the possible overlaps
+        for (let j = otherPossiblePatterns.length - 1; j >= 0 ; j--) {
+            let otherPattern = otherPossiblePatterns[j];
+            let overlapForOtherPattern = new Overlap(otherPattern, offsetX, offsetY);
+            // if there are no overlaps that match the pattern, remove it
+            if (!currentPossibleOverlaps.some(o => o.matches(overlapForOtherPattern))) {
+                otherPossiblePatterns.splice(j, 1); // remove 1 element, starting from index i
+                grid[otherIdx[0]][otherIdx[1]].updateValidPatterns();
 
-                    addToStack(otherIdx);
-                }
+                addToStack(otherIdx);
             }
         }
     }
