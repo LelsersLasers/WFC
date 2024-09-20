@@ -24,6 +24,7 @@ let LOOP = true;
 let H_COLOR = "#BF616A"
 let OUTLINE_COLOR = "#ECEFF4";
 let COLLAPSED_COLOR = "#B48EAD";
+let STACK_COLOR = "#A3BE8C";
 //----------------------------------------------------------------------------//
 
 
@@ -347,6 +348,8 @@ class GridSpot {
         if (DRAW_EDGES) {
             if (this.validStates.length == 1) {
                 rect.style.stroke = COLLAPSED_COLOR;
+            } else if (stack.some(stackIdx => stackIdx[0] == this.x && stackIdx[1] == this.y)) {
+                rect.style.stroke = STACK_COLOR;
             } else {
                 rect.style.stroke = OUTLINE_COLOR;
             }
